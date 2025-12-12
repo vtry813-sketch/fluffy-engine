@@ -20,7 +20,7 @@ const FileType = require('file-type');
 const yts = require('yt-search');
 const TelegramBot = require('node-telegram-bot-api');
 
-// Import des modules de BILAL-MD
+// Import des modules de BILAL-MD - CORRIGÉ
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -42,7 +42,8 @@ const {
   makeInMemoryStore,
   jidDecode,
   fetchLatestBaileysVersion,
-  Browsers
+  Browsers,
+  makeCacheableSignalKeyStore  
 } = require('@whiskeysockets/baileys');
 
 const l = console.log;
@@ -87,6 +88,8 @@ const resetSettings = async (number) => {
   const sanitizedNumber = number.replace(/[^0-9]/g, '');
   await updateUserConfigInMongoDB(sanitizedNumber, config);
 };
+
+//=================CONFIGURATION=================================//
 
 //=================CONFIGURATION=================================//
 
