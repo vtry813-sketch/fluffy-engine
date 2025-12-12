@@ -1,7 +1,22 @@
 FROM node:lts-buster
-RUN git clone https://github.com/JawadYT36/KHAN-MD/root/ikJawad
-WORKDIR /root/ikJawad
-RUN npm install && npm install -g pm2 || yarn install --network-concurrency 1
+
+# Clone ENTIER du repo (obligatoire)
+RUN git clone https://github.com/vtry813-sketch/fluffy-engine.git
+
+# Dossier du projet
+WORKDIR /root/fluffy-engine
+
+# Installation des dépendances
+RUN npm install
+RUN npm install -g pm2
+
+# Copie des fichiers locaux (si tu en as)
 COPY . .
+
+# Port d'exposition
 EXPOSE 9090
+
+# Commande de démarrage
 CMD ["npm", "start"]
+
+
