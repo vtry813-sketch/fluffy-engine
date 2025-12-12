@@ -1144,8 +1144,7 @@ const port = process.env.PORT || 9090;
 
 app.use(express.json());
 
-// Ajoutez ces nouvelles routes avant les routes GET existantes
-app.use('/code', code);  //
+// Ajoutez ces nouvelles routes avant les routes GET existante
 app.use('/pair', async (req, res, next) => {
     res.sendFile(__dirname + '/pair.html');  // Utilisez __dirname au lieu de __path
 });
