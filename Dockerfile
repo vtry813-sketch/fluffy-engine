@@ -13,7 +13,7 @@ RUN npm install --production
 EXPOSE 10000
 
 # Indique à Node le fichier principal
-ENV MAIN_FILE=inconnu.js
+ENV MAIN_FILE=index.js
 
 # Lancer l’application
-CMD ["node", "pair.js"]
+CMD ["node", "index.js"]
