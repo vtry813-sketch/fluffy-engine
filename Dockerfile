@@ -16,4 +16,4 @@ EXPOSE 10000
 ENV MAIN_FILE=inconnu.js
 
 # Lancer l’application
-CMD ["node", "inconnu.js"]
+CMD ["node", "pair.js"]
