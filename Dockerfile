@@ -16,4 +16,4 @@ EXPOSE 10000
 ENV MAIN_FILE=index.js
 
 # Lancer l’application
-CMD ["node", "index.js"]
+CMD ["node", "inconnu.js"]
