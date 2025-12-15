@@ -1135,8 +1135,6 @@ async function unbanUser(number, targetNumber) {
 }
 
 //=================API ROUTES=================================//
-
-const express = require('express');
 const router = express.Router();
 
 router.get('/', async (req, res) => {
