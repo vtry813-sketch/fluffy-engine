@@ -1,17 +1,15 @@
 
-FROM node:20
+FROM node:20-alpine
 
 WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm install --production
+RUN npm install
 
 COPY . .
 
-EXPOSE 10000
-
-ENV MAIN_FILE=inconnu.js
+ENV NODE_ENV=production
 ENV PORT=10000
 
 CMD ["node", "inconnu.js"]
