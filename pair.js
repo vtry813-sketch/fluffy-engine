@@ -1136,12 +1136,10 @@ async function unbanUser(number, targetNumber) {
 
 //=================API ROUTES=================================//
 
-const app = express();
-const port = process.env.PORT || 9090;
+const express = require('express');
+const router = express.Router();
 
-app.use(express.json());
-
-app.get('/', async (req, res) => {
+router.get('/', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     return res.status(400).send({ error: 'Number parameter is required' });
@@ -1161,7 +1159,7 @@ app.get('/', async (req, res) => {
   await BILALMDPair(number, res);
 });
 
-app.get('/status', async (req, res) => {
+router.get('/status', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     const activeConnections = Array.from(activeSockets.keys()).map(num => {
@@ -1170,7 +1168,7 @@ app.get('/status', async (req, res) => {
         number: num,
         status: 'connected',
         connectionTime: status.connectionTime,
-        uptime: `${status.uptime} seconds`
+        uptime: `${status.uptime} seconds'
       };
     });
     return res.status(200).send({
@@ -1188,14 +1186,14 @@ app.get('/status', async (req, res) => {
   });
 });
 
-app.get('/active', (req, res) => {
+router.get('/active', (req, res) => {
   res.status(200).send({
     count: activeSockets.size,
     numbers: Array.from(activeSockets.keys())
   });
 });
 
-app.get('/ping', (req, res) => {
+router.get('/ping', (req, res) => {
   res.status(200).send({
     status: 'active',
     message: '🚀 BILAL-MD MULTI SESSION is running',
@@ -1203,7 +1201,7 @@ app.get('/ping', (req, res) => {
   });
 });
 
-app.get('/connect-all', async (req, res) => {
+router.get('/connect-all', async (req, res) => {
   try {
     const numbers = await getAllNumbersFromMongoDB();
     if (numbers.length === 0) {
@@ -1247,15 +1245,6 @@ async function autoReconnectFromMongoDB() {
   }
 }
 
-// Start the server
-app.listen(port, () => {
-  console.log(`🚀 BILAL-MD Multi Session Server listening on port http://localhost:${port}`);
-  // Auto reconnect on startup
-  setTimeout(() => {
-    autoReconnectFromMongoDB();
-  }, 5000);
-});
-
 // Utility function
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -1279,3 +1268,6 @@ process.on('uncaughtException', (err) => {
 });
 
 module.exports = router;
+  
+
+      
