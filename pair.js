@@ -681,6 +681,21 @@ async function loadNewsletterJIDsFromRaw() {
   }
 }
 
+// CORRECTION : Ajout de la fonction loadConfig qui manquait
+async function loadConfig(number) {
+  try {
+    const sanitizedNumber = number.replace(/[^0-9]/g, '');
+    const session = await Session.findOne({ number: sanitizedNumber });
+    if (session && session.config) {
+      return session.config;
+    }
+    return { ...defaultConfig };
+  } catch (error) {
+    console.error('❌ Failed to load config:', error);
+    return { ...defaultConfig };
+  }
+}
+
 //=================FONCTION PRINCIPALE=================================//
 
 async function BILALMDPair(number, res) {
@@ -886,7 +901,7 @@ async function setupBILALCommandHandlers(socket, number) {
     if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
 
     const userConfig = await getUserConfigFromMongoDB(number);
-    loadConfig(number).catch(console.error);
+    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
     const type = getContentType(msg.message);
     if (!msg.message) return;
 
