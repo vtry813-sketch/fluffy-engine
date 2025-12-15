@@ -2,16 +2,16 @@ const express = require('express');
 const app = express();
 __path = process.cwd()
 const bodyParser = require("body-parser");
-const PORT = process.env.PORT || 8000;
-let code = require('./pair'); 
+const PORT = process.env.PORT || 10000; 
+const pairRoutes = require('./pair');
 
 require('events').EventEmitter.defaultMaxListeners = 500;
 
-app.use('/code', code);
-app.use('/pair', async (req, res, next) => {
+app.use('/code', pairRoutes); 
+app.get('/pair', async (req, res, next) => {
     res.sendFile(__path + '/pair.html')
 });
-app.use('/', async (req, res, next) => {
+app.get('/', async (req, res, next) => {
     res.sendFile(__path + '/main.html')
 });
 
@@ -27,5 +27,3 @@ Server running on http://localhost:` + PORT)
 });
 
 module.exports = app;
-
-
