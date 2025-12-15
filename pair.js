@@ -1166,7 +1166,7 @@ router.get('/status', async (req, res) => {
         number: num,
         status: 'connected',
         connectionTime: status.connectionTime,
-        uptime: `${status.uptime} seconds'
+        uptime: `${status.uptime} seconds`
       };
     });
     return res.status(200).send({
@@ -1266,6 +1266,3 @@ process.on('uncaughtException', (err) => {
 });
 
 module.exports = router;
-  
-
-      
