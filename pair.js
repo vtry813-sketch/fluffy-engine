@@ -1278,4 +1278,4 @@ process.on('uncaughtException', (err) => {
   exec(`pm2 restart ${process.env.PM2_NAME || 'BILAL-MD-multi'}`);
 });
 
-module.exports = { activeSockets, getConnectionStatus, isNumberAlreadyConnected };
+module.exports = router;
