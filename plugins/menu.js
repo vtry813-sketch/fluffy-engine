@@ -6,7 +6,7 @@ cmd({
     pattern: "menu",
     alias: ["allmenu","fullmenu"],
     desc: "Show all bot commands",
-    category: "menu",
+    category: "general",
     react: "📜",
     filename: __filename
 },
