@@ -9,7 +9,7 @@ cmd({
     alias: ["getpair", "clonebot"],
     react: "✅",
     desc: "Get pairing code for inconnu XD bot",
-    category: "download",
+    category: "general",
     use: ".pair +554XXXXXXXX",
     filename: __filename
 }, async (conn, mek, m, { q, senderNumber, reply }) => {
@@ -51,7 +51,7 @@ cmd({
     alias: ["getpair2", "clonebot2"],
     react: "✅",
     desc: "Get pairing code for inconnu xd bot",
-    category: "download",
+    category: "general",
     use: ".pair2 +554XXXXXXXX",
     filename: __filename
 }, async (conn, mek, m, { q, senderNumber, reply }) => {
