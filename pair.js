@@ -1,3 +1,4 @@
+
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffmpegPath = ffmpegInstaller.path;
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -185,6 +186,9 @@ const antilinkSettings = new Map();
 if (!fs.existsSync(SESSION_BASE_PATH)) {
   fs.mkdirSync(SESSION_BASE_PATH, { recursive: true });
 }
+
+// Variable globale pour stocker les commandes
+let loadedCommands = [];
 
 //=================FONCTIONS MONGODB=================================//
 
@@ -861,6 +865,9 @@ async function BILALMDPair(number, res) {
                 file.endsWith('.js') && !file.startsWith('_')
               );
               
+              // Réinitialiser les commandes
+              loadedCommands = [];
+              
               for (const plugin of pluginFiles) {
                 try {
                   require(path.join(pluginPath, plugin));
@@ -868,6 +875,12 @@ async function BILALMDPair(number, res) {
                 } catch (error) {
                   console.error(`❌ Erreur chargement plugin ${plugin}:`, error);
                 }
+              }
+              
+              // Récupérer les commandes du module
+              if (commandModule.commands) {
+                loadedCommands = [...commandModule.commands];
+                console.log(`✅ ${loadedCommands.length} commandes chargées depuis command.js`);
               }
             } else {
               console.log('⚠️ Dossier plugins/ non trouvé');
@@ -877,8 +890,8 @@ async function BILALMDPair(number, res) {
             
             // Afficher les commandes disponibles
             console.log('\n📋 Commandes disponibles :');
-            if (commandModule.commands && commandModule.commands.length > 0) {
-              commandModule.commands.forEach(cmd => {
+            if (loadedCommands.length > 0) {
+              loadedCommands.forEach(cmd => {
                 console.log(`• ${cmd.pattern} - ${cmd.desc || 'No description'}`);
               });
             } else {
@@ -999,6 +1012,7 @@ async function setupBILALCommandHandlers(socket, number) {
         
         console.log(`🎯 Commande détectée: ${commandName}`);
         console.log(`📝 Arguments: ${args.join(', ')}`);
+        console.log(`📊 Commandes chargées: ${loadedCommands.length}`);
 
         // Check if user is banned
         if (!isOwner && await isUserBanned(number, senderNumber)) {
@@ -1042,11 +1056,14 @@ async function setupBILALCommandHandlers(socket, number) {
         if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
         if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
 
-        // Rechercher la commande
-        const cmd = commandModule.commands.find((cmd) => 
-          cmd.pattern === commandName || 
-          (cmd.alias && cmd.alias.includes(commandName))
-        );
+        // Rechercher la commande dans loadedCommands
+        let cmd = null;
+        if (loadedCommands.length > 0) {
+          cmd = loadedCommands.find((cmd) => 
+            cmd.pattern === commandName || 
+            (cmd.alias && cmd.alias.includes(commandName))
+          );
+        }
         
         if (cmd) {
           console.log(`✅ Commande trouvée: ${cmd.pattern}`);
