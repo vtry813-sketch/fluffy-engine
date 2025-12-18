@@ -34,14 +34,14 @@ async (conn, mek, m, { from }) => {
         // ===== HEADER =====
         let menu = `
 ╭━━━━━━━━━━━━━━━┈⊷
-┃✪┃ 𝙾𝚆𝙽𝙴𝚁: ${config.OWNER_NAME}
-┃✪┃ 𝚄𝚂𝙴𝚁: ${usern}
-┃✪┃ 𝙳𝙰𝚃𝙴: ${date}
-┃✪┃ 𝚃𝙸𝙼𝙴: ${time}
-┃✪┃ 𝙿𝙻𝚄𝙶𝙸𝙽𝚂: ${totalCommands}
-┃✪┃ 𝙼𝙾𝙳𝙴: ${config.WORK_TYPE || "public"}
-┃✪┃ 𝙷𝙰𝙽𝙳𝙻𝙴𝚁: ${config.PREFIX}
-┃✪┃ 𝚅𝙴𝚁𝚂𝙸𝙾𝙽: ${require("../package.json").version}
+┃𖤐┃ 𝙾𝚆𝙽𝙴𝚁: ${config.OWNER_NAME}
+┃𖤐┃ 𝚄𝚂𝙴𝚁: ${usern}
+┃𖤐┃ 𝙳𝙰𝚃𝙴: ${date}
+┃𖤐┃ 𝚃𝙸𝙼𝙴: ${time}
+┃𖤐┃ 𝙿𝙻𝚄𝙶𝙸𝙽𝚂: ${totalCommands}
+┃𖤐┃ 𝙼𝙾𝙳𝙴: ${config.WORK_TYPE || "public"}
+┃𖤐┃ 𝙷𝙰𝙽𝙳𝙻𝙴𝚁: ${config.PREFIX}
+┃𖤐┃ 𝚅𝙴𝚁𝚂𝙸𝙾𝙽: ${require("../package.json").version}
 ╰━━━━━━━━━━━━━━━━┈⊷
 `
 
@@ -49,7 +49,7 @@ async (conn, mek, m, { from }) => {
         Object.keys(categories).sort().forEach(category => {
             menu += `
 ╭━━━━━━━━━━━━━┈⊷
-┃⬢  *${category.toUpperCase()}*
+┃𖤐  *${category.toUpperCase()}*
 ╰━━━━━━━━━━━━━┈⊷
 ╭━━━━━━━━━━━━━┈⊷`
             categories[category].forEach(cmd => {
