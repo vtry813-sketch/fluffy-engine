@@ -4,7 +4,7 @@ cmd({
     pattern: "promote",
     alias: ["p", "makeadmin"],
     desc: "Promotes a member to group admin",
-    category: "admin",
+    category: "group",
     react: "⬆️",
     filename: __filename
 },
