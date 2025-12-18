@@ -6,7 +6,7 @@ cmd({
     react: "👤",
     alias: ["userinfo", "person"],
     desc: "Get complete user profile information",
-    category: "utility",
+    category: "tool",
     use: '.person [@tag or reply]',
     filename: __filename
 },
