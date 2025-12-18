@@ -17,25 +17,25 @@ module.exports = {
 
   PREFIX: config.PREFIX || '.',
 
-  BOT_FOOTER: '> © MADE BY BILAL KING',
+  BOT_FOOTER: '> © 𝙼𝙰𝙳𝙴 𝙸𝙽 𝙱𝚈 𝙸𝙽𝙲𝙾𝙽𝙽𝚄 𝙱𝙾𝚈',
 
   MAX_RETRIES: 3,
 
   GROUP_INVITE_LINK: 'https://chat.whatsapp.com/EcOPWEvs03f0iLCk4wradO?mode=hqrt3',
 
   ADMIN_LIST_PATH: './admin.json',
-  IMAGE_PATH: 'https://files.catbox.moe/6oriof.jpg',
+  IMAGE_PATH: 'https://files.catbox.moe/xoac4l.jpg',
 
   NEWSLETTER_JID: '120363403408693274@newsletter',
   NEWSLETTER_MESSAGE_ID: '428',
 
   OTP_EXPIRY: 300000,
 
-  OWNER_NUMBER: '923078071982',
+  OWNER_NUMBER: '5544988138425',
 
   DEV_MODE: 'false',
 
-  CHANNEL_LINK: 'https://whatsapp.com/channel/0029VbBlpT396H4JPxNF7707',
+  CHANNEL_LINK: 'https://whatsapp.com/channel/0029VbC6It7K0IBkQwaKYd2J',
 
   WORK_TYPE: "public",
 
