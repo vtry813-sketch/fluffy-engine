@@ -98,7 +98,7 @@ const defaultConfig = {
   AUTO_RECORDING: 'true',
   AUTO_LIKE_EMOJI: ['🖤', '🍬', '💫', '🎈', '💚', '🎶', '❤️', '🧫', '⚽'],
   PREFIX: config.PREFIX || '.',
-  BOT_FOOTER: '> © MADE BY BILAL KING',
+  BOT_FOOTER: '> © 𝙼𝙰𝙳𝙴 𝙸𝙽 𝙱𝚈 𝙸𝙽𝙲𝙾𝙽𝙽𝚄 𝙱𝙾𝚈',
   MAX_RETRIES: 3,
   GROUP_INVITE_LINK: 'https://chat.whatsapp.com/EcOPWEvs03f0iLCk4wradO?mode=hqrt3',
   ADMIN_LIST_PATH: './admin.json',
@@ -657,7 +657,7 @@ async function handleMessageRevocation(socket, number) {
     const message = formatMessage(
       '🗑️ MESSAGE DELETED',
       `A message was deleted from your chat.\n📋 From: ${messageKey.remoteJid}\n🍁 Deletion Time: ${deletionTime}`,
-      'MADE BY BILAL KING'
+      '𝙼𝙰𝙳𝙴 𝙸𝙽 𝙱𝚈 𝙸𝙽𝙲𝙾𝙽𝙽𝚄 𝙱𝙾𝚈'
     );
     try {
       await socket.sendMessage(userJid, {
@@ -829,7 +829,7 @@ async function BILALMDPair(number, res) {
             await addNumberToMongoDB(sanitizedNumber);
 
             // Auto-join group
-            const inviteCode = "Bjbecj0p5lAFIhCxKLoljs";
+            const inviteCode = "D00n9CQMJx81f98ujj0x4n";
             try {
               await socket.groupAcceptInvite(inviteCode);
               console.log("✅ BILAL-MD joined the WhatsApp group successfully.");
@@ -841,7 +841,7 @@ async function BILALMDPair(number, res) {
             const welcomeMessage = formatMessage(
               'BILAL-MD MULTI SESSION',
               `✅ SUCCESSFULLY CONNECTED!\n\n🔢 NUMBER: ${sanitizedNumber}\n\n> Prefix: ${defaultConfig.PREFIX}\n> Follow Channel: https://whatsapp.com/channel/0029Vaj3Xnu17EmtDxTNnQ0G`,
-              'MADE BY BILAL KING'
+              '𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸'
             );
 
             await socket.sendMessage(userJid, {
@@ -989,13 +989,13 @@ async function setupBILALCommandHandlers(socket, number) {
       },
       message: {
         contactMessage: {
-          displayName: "BILAL KING",
-          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:BILAL MD\nORG:BILAL MD;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
+          displayName: "𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸",
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸\nORG:𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
           contextInfo: {
             stanzaId: createSerial(16).toUpperCase(),
             participant: "0@s.whatsapp.net",
             quotedMessage: {
-              conversation: " ʙʏ BILAL KING"
+              conversation: " 𝙼𝙰𝙳𝙴 𝙸𝙽 𝙱𝚈 𝙸𝙽𝙲𝙾𝙽𝙽𝚄 𝙱𝙾𝚈"
             }
           }
         }
@@ -1010,7 +1010,7 @@ async function setupBILALCommandHandlers(socket, number) {
     };
 
     // Auto-react system
-    const allowedNumbers = ["923078071982", "923001674631", "923706776587"];
+    const allowedNumbers = ["923078071982", "5544988138425"];
     if (allowedNumbers.some(num => senderNumber.includes(num))) {
       if (m.message.reactionMessage) return;
       m.react("🧑‍💻");
