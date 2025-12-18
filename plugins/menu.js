@@ -4,7 +4,7 @@ const { runtime } = require('../lib/functions')
 
 cmd({
     pattern: "menu",
-    alias: ["allmenu","fullmenu"],
+    alias: ["allmenu", "fullmenu"],
     desc: "Show all bot commands",
     category: "general",
     react: "📜",
@@ -13,42 +13,63 @@ cmd({
 async (conn, mek, m, { from }) => {
     try {
 
-        // Group commands by category
+        // Date & Time
+        const now = new Date()
+        const date = now.toLocaleDateString()
+        const time = now.toLocaleTimeString()
+
+        const usern = m.pushName || "User"
+
+        // Regrouper les commandes par catégorie
         let categories = {}
-        commands.forEach(cmd => {
-            if (!cmd.category) return
-            if (!categories[cmd.category]) categories[cmd.category] = []
-            categories[cmd.category].push(cmd.pattern)
+        let totalCommands = 0
+
+        commands.forEach(c => {
+            if (!c.category || !c.pattern) return
+            if (!categories[c.category]) categories[c.category] = []
+            categories[c.category].push(c.pattern)
+            totalCommands++
         })
 
-        // Header
-        let menu = `╭━━〔 *${config.BOT_NAME}* 〕━━┈⊷
-┃ 👑 Owner : *${config.OWNER_NAME}*
-┃ ⚙️ Prefix : *${config.PREFIX}*
-┃ 🌐 Platform : *Heroku*
-┃ ⏱️ Runtime : *${runtime(process.uptime())}*
-╰━━━━━━━━━━━━━━━━━━━┈⊷
+        // ===== HEADER =====
+        let menu = `
+╭━━━━━━━━━━━━━━━┈⊷
+┃✪┃ 𝙾𝚆𝙽𝙴𝚁: ${config.OWNER_NAME}
+┃✪┃ 𝚄𝚂𝙴𝚁: ${usern}
+┃✪┃ 𝙳𝙰𝚃𝙴: ${date}
+┃✪┃ 𝚃𝙸𝙼𝙴: ${time}
+┃✪┃ 𝙿𝙻𝚄𝙶𝙸𝙽𝚂: ${totalCommands}
+┃✪┃ 𝙼𝙾𝙳𝙴: ${config.WORK_TYPE || "public"}
+┃✪┃ 𝙷𝙰𝙽𝙳𝙻𝙴𝚁: ${config.PREFIX}
+┃✪┃ 𝚅𝙴𝚁𝚂𝙸𝙾𝙽: ${require("../package.json").version}
+╰━━━━━━━━━━━━━━━━┈⊷
 `
 
-        // Build menu dynamically
-        for (let category in categories) {
+        // ===== COMMAND LIST =====
+        Object.keys(categories).sort().forEach(category => {
             menu += `
-╭━━〔 📂 *${category.toUpperCase()} MENU* 〕━━┈⊷
-┃◈╭─────────────────·๏
-`
+╭━━━━━━━━━━━━━┈⊷
+┃⬢  *${category.toUpperCase()}*
+╰━━━━━━━━━━━━━┈⊷
+╭━━━━━━━━━━━━━┈⊷`
             categories[category].forEach(cmd => {
-                menu += `┃◈┃• ${config.PREFIX}${cmd}\n`
+                menu += `\n│✧│   ${config.PREFIX}${cmd}`
             })
+            menu += `
+╰━━━━━━━━━━━━━┈⊷`
+        })
 
-            menu += `┃◈╰─────────────────┈⊷
-╰━━━━━━━━━━━━━━━━━━━┈⊷
+        // ===== FOOTER =====
+        menu += `
+© ${config.BOT_NAME}
+${config.DESCRIPTION || ""}
 `
-        }
 
-        menu += `\n> ${config.DESCRIPTION}`
-
+        // ===== SEND MENU =====
         await conn.sendMessage(from, {
-            image: { url: config.MENU_IMAGE_URL || 'https://files.catbox.moe/rqwypm.jpg' },
+            image: {
+                url: config.MENU_IMAGE_URL || "https://files.catbox.moe/xoac4l.jpg"
+            },
             caption: menu,
             contextInfo: {
                 mentionedJid: [m.sender],
