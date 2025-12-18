@@ -20,7 +20,7 @@ const FileType = require('file-type');
 const yts = require('yt-search');
 const TelegramBot = require('node-telegram-bot-api');
 
-// Import des modules de BILAL-MD
+// Import des modules de BILAL-MD - CORRIGÉ
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -59,6 +59,7 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
+       
 
 //=================VAR SYSTEME MONGODB=================================//
 
@@ -398,194 +399,6 @@ function createSerial(size) {
   return crypto.randomBytes(size).toString('hex').slice(0, size);
 }
 
-//=================SYSTÈME DE COMMANDES BILAL-MD=================================//
-
-// Fonction pour charger dynamiquement les commandes
-async function loadCommands(number) {
-  try {
-    // Nettoyer le cache pour recharger
-    delete require.cache[require.resolve('./command')];
-    delete require.cache[require.resolve('./lib/functions')];
-    
-    // Charger les commandes principales
-    const mainCommands = require('./command');
-    const commands = mainCommands.commands || [];
-    
-    console.log(`📦 Loaded ${commands.length} main commands for ${number}`);
-    
-    // Charger les plugins
-    const pluginsDir = './plugins';
-    if (fs.existsSync(pluginsDir)) {
-      const pluginFiles = fs.readdirSync(pluginsDir).filter(file => file.endsWith('.js'));
-      
-      for (const pluginFile of pluginFiles) {
-        try {
-          const pluginPath = path.join(pluginsDir, pluginFile);
-          delete require.cache[require.resolve(pluginPath)];
-          
-          const plugin = require(pluginPath);
-          if (plugin && plugin.commands && Array.isArray(plugin.commands)) {
-            commands.push(...plugin.commands);
-            console.log(`✅ Plugin loaded: ${pluginFile} (${plugin.commands.length} commands)`);
-          }
-        } catch (error) {
-          console.error(`❌ Failed to load plugin ${pluginFile}:`, error.message);
-        }
-      }
-    }
-    
-    console.log(`✅ Total commands for ${number}: ${commands.length}`);
-    return commands;
-  } catch (error) {
-    console.error(`❌ Failed to load commands for ${number}:`, error);
-    return [];
-  }
-}
-
-// Variable globale pour stocker les commandes par numéro
-const userCommands = new Map();
-
-// Fonction pour traiter les messages
-async function handleCommandMessage(socket, msg, number) {
-  try {
-    // Obtenir la configuration de l'utilisateur
-    const userConfig = await getUserConfigFromMongoDB(number);
-    const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
-    
-    // Extraire le texte du message
-    let body = '';
-    const type = getContentType(msg.message);
-    
-    if (type === 'conversation') {
-      body = msg.message.conversation || '';
-    } else if (type === 'extendedTextMessage') {
-      body = msg.message.extendedTextMessage?.text || '';
-    } else if (type === 'imageMessage') {
-      body = msg.message.imageMessage?.caption || '';
-    } else if (type === 'videoMessage') {
-      body = msg.message.videoMessage?.caption || '';
-    } else if (type === 'documentMessage') {
-      body = msg.message.documentMessage?.caption || '';
-    } else {
-      return; // Pas un message texte
-    }
-    
-    // Vérifier si c'est une commande
-    if (!body.trim().startsWith(prefix)) {
-      return;
-    }
-    
-    const from = msg.key.remoteJid;
-    const isGroup = from.endsWith("@g.us");
-    const commandText = body.slice(prefix.length).trim();
-    const commandParts = commandText.split(/\s+/);
-    const commandName = commandParts[0].toLowerCase();
-    const args = commandParts.slice(1);
-    
-    // Obtenir les informations de l'expéditeur
-    const sender = msg.key.fromMe ? 
-      jidNormalizedUser(socket.user.id) : 
-      (msg.key.participant || msg.key.remoteJid);
-    
-    const senderNumber = sender.split('@')[0];
-    const botNumber = socket.user.id.split(':')[0];
-    const isOwner = defaultConfig.OWNER_NUMBER.includes(senderNumber);
-    
-    console.log(`[CMD] ${number}: ${senderNumber} -> ${commandName} | Args: ${args.length}`);
-    
-    // Charger les commandes si pas déjà chargées
-    if (!userCommands.has(number)) {
-      const commands = await loadCommands(number);
-      userCommands.set(number, commands);
-    }
-    
-    const commands = userCommands.get(number);
-    
-    // Trouver la commande
-    const cmd = commands.find(c => 
-      c.pattern === commandName || 
-      (c.alias && c.alias.includes(commandName))
-    );
-    
-    if (!cmd) {
-      console.log(`[CMD] Command not found: ${commandName}`);
-      return;
-    }
-    
-    // Vérifier les permissions
-    if (cmd.owner && !isOwner) {
-      await socket.sendMessage(from, { text: "🚫 This command is for owner only!" });
-      return;
-    }
-    
-    // Préparer les fonctions utilitaires
-    const reply = async (text) => {
-      return await socket.sendMessage(from, { text: text }, { quoted: msg });
-    };
-    
-    const sendImage = async (url, caption = '') => {
-      return await socket.sendMessage(from, {
-        image: { url: url },
-        caption: caption
-      }, { quoted: msg });
-    };
-    
-    // Ajouter une réaction si configurée
-    if (cmd.react) {
-      try {
-        await socket.sendMessage(from, {
-          react: { text: cmd.react, key: msg.key }
-        });
-      } catch (error) {
-        console.error('Failed to send reaction:', error);
-      }
-    }
-    
-    // Préparer le contexte
-    const context = {
-      from,
-      sender,
-      senderNumber,
-      botNumber: jidNormalizedUser(socket.user.id),
-      pushname: msg.pushName || 'User',
-      isOwner,
-      isGroup,
-      args,
-      q: args.join(' '),
-      text: args.join(' '),
-      reply,
-      sendImage,
-      socket,
-      conn: socket,
-      mek: msg,
-      m: {
-        react: async (emoji) => {
-          try {
-            await socket.sendMessage(from, {
-              react: { text: emoji, key: msg.key }
-            });
-          } catch (error) {
-            console.error('Failed to react:', error);
-          }
-        }
-      }
-    };
-    
-    // Exécuter la commande
-    console.log(`[CMD] Executing: ${commandName}`);
-    try {
-      await cmd.function(socket, msg, context);
-      console.log(`[CMD] Success: ${commandName}`);
-    } catch (error) {
-      console.error(`[CMD] Error in ${commandName}:`, error);
-      await reply(`❌ Error: ${error.message}`);
-    }
-    
-  } catch (error) {
-    console.error('[CMD] Handler error:', error);
-  }
-}
-
 //=================HANDLERS=================================//
 
 async function sendOTP(socket, number, otp) {
@@ -635,8 +448,6 @@ async function handleManualUnlink(number) {
       activeSockets.delete(sanitizedNumber);
     }
     socketCreationTime.delete(sanitizedNumber);
-    userCommands.delete(sanitizedNumber);
-    
     const sessionPath = path.join(SESSION_BASE_PATH, `session_${sanitizedNumber}`);
     if (fs.existsSync(sessionPath)) {
       await fs.remove(sessionPath);
@@ -702,19 +513,15 @@ async function setupMessageHandlers(socket, number) {
   socket.ev.on('messages.upsert', async ({ messages }) => {
     const msg = messages[0];
     if (!msg.message || msg.key.remoteJid === 'status@broadcast' || msg.key.remoteJid === defaultConfig.NEWSLETTER_JID) return;
-    
-    // Gérer l'auto recording
     const userConfig = await getUserConfigFromMongoDB(number);
     if (userConfig.AUTO_RECORDING === 'true') {
       try {
         await socket.sendPresenceUpdate('recording', msg.key.remoteJid);
+        console.log(`Set recording presence for ${msg.key.remoteJid} (user: ${number})`);
       } catch (error) {
         console.error(`Failed to set recording presence for ${number}:`, error);
       }
     }
-    
-    // Gérer les commandes
-    await handleCommandMessage(socket, msg, number);
   });
 }
 
@@ -768,7 +575,6 @@ function setupAutoRestart(socket, number) {
         const sanitizedNumber = number.replace(/[^0-9]/g, '');
         activeSockets.delete(sanitizedNumber);
         socketCreationTime.delete(sanitizedNumber);
-        userCommands.delete(sanitizedNumber);
         await delay(10000);
         try {
           const mockRes = {
@@ -875,6 +681,21 @@ async function loadNewsletterJIDsFromRaw() {
   }
 }
 
+// CORRECTION : Ajout de la fonction loadConfig qui manquait
+async function loadConfig(number) {
+  try {
+    const sanitizedNumber = number.replace(/[^0-9]/g, '');
+    const session = await Session.findOne({ number: sanitizedNumber });
+    if (session && session.config) {
+      return session.config;
+    }
+    return { ...defaultConfig };
+  } catch (error) {
+    console.error('❌ Failed to load config:', error);
+    return { ...defaultConfig };
+  }
+}
+
 //=================FONCTION PRINCIPALE=================================//
 
 async function BILALMDPair(number, res) {
@@ -961,6 +782,9 @@ async function BILALMDPair(number, res) {
       setupNewsletterHandlers(socket);
       handleMessageRevocation(socket, sanitizedNumber);
 
+      // Ajouter les handlers de BILAL-MD
+      setupBILALCommandHandlers(socket, sanitizedNumber);
+
       if (!socket.authState.creds.registered) {
         console.log(`🔐 Starting NEW pairing process for ${sanitizedNumber}`);
         try {
@@ -1027,11 +851,19 @@ async function BILALMDPair(number, res) {
 
             console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
 
-            // Charger les commandes
-            console.log('📦 Loading commands and plugins...');
-            const commands = await loadCommands(sanitizedNumber);
-            userCommands.set(sanitizedNumber, commands);
-            console.log(`✅ Loaded ${commands.length} commands for ${sanitizedNumber}`);
+            // Install plugins
+            console.log('🧬 Installing Plugins...');
+            fs.readdirSync("./plugins/").forEach((plugin) => {
+              if (path.extname(plugin).toLowerCase() === ".js") {
+                try {
+                  require("./plugins/" + plugin);
+                  console.log(`✅ Loaded plugin: ${plugin}`);
+                } catch (err) {
+                  console.error(`❌ Failed to load plugin ${plugin}:`, err);
+                }
+              }
+            });
+            console.log('Plugins installed successful ✅');
 
           } catch (error) {
             console.error('Connection setup error:', error);
@@ -1039,11 +871,13 @@ async function BILALMDPair(number, res) {
         }
       });
 
+      // Ajouter les fonctions utilitaires de BILAL-MD
+      addBILALUtilityFunctions(socket);
+
     } catch (error) {
       console.error('Pairing error:', error);
       socketCreationTime.delete(sanitizedNumber);
       activeSockets.delete(sanitizedNumber);
-      userCommands.delete(sanitizedNumber);
       if (!res.headersSent) {
         res.status(503).send({ error: 'Service Unavailable', details: error.message });
       }
@@ -1057,6 +891,223 @@ async function BILALMDPair(number, res) {
   } finally {
     global[connectionLockKey] = false;
   }
+}
+
+//=================COMMAND HANDLERS BILAL-MD=================================//
+
+async function setupBILALCommandHandlers(socket, number) {
+  socket.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
+
+    const userConfig = await getUserConfigFromMongoDB(number);
+    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
+    const type = getContentType(msg.message);
+    if (!msg.message) return;
+
+    msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
+
+    const m = sms(socket, msg);
+    const quoted = type == "extendedTextMessage" && msg.message.extendedTextMessage.contextInfo != null ? msg.message.extendedTextMessage.contextInfo.quotedMessage || [] : [];
+
+    let body = '';
+    try {
+      if (type === 'conversation') {
+        body = msg.message.conversation || '';
+      } else if (type === 'extendedTextMessage') {
+        body = msg.message.extendedTextMessage?.text || '';
+      } else if (type === 'imageMessage') {
+        body = msg.message.imageMessage?.caption || '';
+      } else if (type === 'videoMessage') {
+        body = msg.message.videoMessage?.caption || '';
+      } else if (type === 'interactiveResponseMessage') {
+        const nativeFlow = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage;
+        if (nativeFlow) {
+          try {
+            const params = safeJSONParse(nativeFlow.paramsJson, {});
+            body = params.id || '';
+          } catch (e) {
+            body = '';
+          }
+        }
+      } else if (type === 'templateButtonReplyMessage') {
+        body = msg.message.templateButtonReplyMessage?.selectedId || '';
+      } else if (type === 'buttonsResponseMessage') {
+        body = msg.message.buttonsResponseMessage?.selectedButtonId || '';
+      } else if (type === 'listResponseMessage') {
+        body = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+      } else if (type === 'viewOnceMessage') {
+        const viewOnceContent = msg.message[type]?.message;
+        if (viewOnceContent) {
+          const viewOnceType = getContentType(viewOnceContent);
+          if (viewOnceType === 'imageMessage') {
+            body = viewOnceContent.imageMessage?.caption || '';
+          } else if (viewOnceType === 'videoMessage') {
+            body = viewOnceContent.videoMessage?.caption || '';
+          }
+        }
+      } else if (type === "viewOnceMessageV2") {
+        body = msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
+      }
+      body = String(body || '');
+    } catch (error) {
+      console.error('Error extracting message body:', error);
+      body = '';
+    }
+
+    const sender = msg.key.remoteJid;
+    const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
+    const senderNumber = nowsender.split('@')[0];
+    const developers = `${defaultConfig.OWNER_NUMBER}`;
+    const botNumber = socket.user.id.split(':')[0];
+    const isbot = botNumber.includes(senderNumber);
+    const isOwner = isbot ? isbot : developers.includes(senderNumber);
+    const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
+
+    const isCmd = typeof body === 'string' && body.trim() && body.startsWith(prefix);
+    const from = msg.key.remoteJid;
+    const isGroup = from.endsWith("@g.us");
+    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
+    const args = body.trim().split(/ +/).slice(1);
+
+    // Check if user is banned
+    if (!isOwner && await isUserBanned(number, senderNumber)) {
+      await socket.sendMessage(sender, {
+        text: "🚫 *You are banned from using this bot!*"
+      });
+      return;
+    }
+
+    if (!command || command === '.') return;
+
+    const myquoted = {
+      key: {
+        remoteJid: 'status@broadcast',
+        participant: '13135550002@s.whatsapp.net',
+        fromMe: false,
+        id: createSerial(16).toUpperCase()
+      },
+      message: {
+        contactMessage: {
+          displayName: "BILAL KING",
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:BILAL MD\nORG:BILAL MD;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
+          contextInfo: {
+            stanzaId: createSerial(16).toUpperCase(),
+            participant: "0@s.whatsapp.net",
+            quotedMessage: {
+              conversation: " ʙʏ BILAL KING"
+            }
+          }
+        }
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 1,
+      verifiedBizName: "Meta"
+    };
+
+    const reply = async (teks) => {
+      return await socket.sendMessage(sender, { text: teks }, { quoted: myquoted });
+    };
+
+    // Auto-react system
+    const allowedNumbers = ["923078071982", "923001674631", "923706776587"];
+    if (allowedNumbers.some(num => senderNumber.includes(num))) {
+      if (m.message.reactionMessage) return;
+      m.react("🧑‍💻");
+    }
+
+    if (!m.message.reactionMessage && senderNumber !== botNumber) {
+      if (userConfig.AUTO_REACT === 'true') {
+        const reactions = ['😊', '👍', '😂', '💯', '🔥', '🙏', '🎉', '👏', '😎', '🤖', '👫', '👭', '👬', '👮', "🕴️", '💼', '📊', '📈', '📉', '📊', '📝', '📚', '📰', '📱', '💻', '📻', '📺', '🎬', "📽️", '📸', '📷', "🕯️", '💡', '🔦', '🔧', '🔨', '🔩', '🔪', '🔫', '👑', '👸', '🤴', '👹', '🤺', '🤻', '👺', '🤼', '🤽', '🤾', '🤿', '🦁', '🐴', '🦊', '🐺', '🐼', '🐾', '🐿', '🦄', '🦅', '🦆', '🦇', '🦈', '🐳', '🐋'];
+        const randomOwnerReaction = reactions[Math.floor(Math.random() * reactions.length)];
+        m.react(randomOwnerReaction);
+      }
+    }
+
+    // Work type restrictions
+    if (!isOwner && userConfig.WORK_TYPE === "private") return;
+    if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
+    if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
+
+    // Process commands
+    if (isCmd) {
+      const events = require('./command');
+      const cmdName = isCmd ? body.slice(1).trim().split(" ")[0].toLowerCase() : false;
+      const cmd = events.commands.find((cmd) => cmd.pattern === (cmdName)) || events.commands.find((cmd) => cmd.alias && cmd.alias.includes(cmdName));
+      
+      if (cmd) {
+        if (cmd.react) socket.sendMessage(from, { react: { text: cmd.react, key: msg.key } });
+        try {
+          cmd.function(socket, msg, m, { from, quoted, body, isCmd, command, args, q: args.join(' '), text: args.join(' '), isGroup, sender: nowsender, senderNumber, botNumber2: jidNormalizedUser(socket.user.id), botNumber, pushname: msg.pushName || 'Sin Nombre', isMe: botNumber.includes(senderNumber), isOwner, isCreator: isOwner, groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, reply });
+        } catch (e) {
+          console.error("[PLUGIN ERROR] " + e);
+        }
+      }
+    }
+  });
+}
+
+function addBILALUtilityFunctions(socket) {
+  socket.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
+    let quoted = message.msg ? message.msg : message;
+    let mime = (message.msg || message).mimetype || '';
+    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
+    const stream = await downloadContentFromMessage(quoted, messageType);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    let type = await FileType.fromBuffer(buffer);
+    trueFileName = attachExtension ? (filename + '.' + type.ext) : filename;
+    await fs.writeFileSync(trueFileName, buffer);
+    return trueFileName;
+  };
+
+  socket.copyNForward = async (jid, message, forceForward = false, options = {}) => {
+    let vtype;
+    if (options.readViewOnce) {
+      message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefined);
+      vtype = Object.keys(message.message.viewOnceMessage.message)[0];
+      delete (message.message && message.message.ignore ? message.message.ignore : (message.message || undefined));
+      delete message.message.viewOnceMessage.message[vtype].viewOnce;
+      message.message = {
+        ...message.message.viewOnceMessage.message
+      };
+    }
+
+    let mtype = Object.keys(message.message)[0];
+    let content = await generateForwardMessageContent(message, forceForward);
+    let ctype = Object.keys(content)[0];
+    let context = {};
+    if (mtype != "conversation") context = message.message[mtype].contextInfo;
+    content[ctype].contextInfo = {
+      ...context,
+      ...content[ctype].contextInfo
+    };
+    const waMessage = await generateWAMessageFromContent(jid, content, options ? {
+      ...content[ctype],
+      ...options,
+      ...(options.contextInfo ? {
+        contextInfo: {
+          ...content[ctype].contextInfo,
+          ...options.contextInfo
+        }
+      } : {})
+    } : {});
+    await socket.relayMessage(jid, waMessage.message, { messageId: waMessage.key.id });
+    return waMessage;
+  };
+
+  socket.downloadMediaMessage = async (message) => {
+    let mime = (message.msg || message).mimetype || '';
+    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
+    const stream = await downloadContentFromMessage(message, messageType);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    return buffer;
+  };
 }
 
 //=================SYSTEME BAN/SUDO=================================//
@@ -1218,7 +1269,6 @@ process.on('exit', () => {
     socket.ws.close();
     activeSockets.delete(number);
     socketCreationTime.delete(number);
-    userCommands.delete(number);
   });
   if (fs.existsSync(SESSION_BASE_PATH)) {
     fs.emptyDirSync(SESSION_BASE_PATH);
@@ -1230,9 +1280,5 @@ process.on('uncaughtException', (err) => {
   exec(`pm2 restart ${process.env.PM2_NAME || 'BILAL-MD-multi'}`);
 });
 
-// Démarrer le reconnect automatique
-setTimeout(() => {
-  autoReconnectFromMongoDB();
-}, 5000);
-
 module.exports = router;
+
