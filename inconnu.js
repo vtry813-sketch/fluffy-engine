@@ -7,7 +7,7 @@ const app = express();
 const __path = process.cwd();
 
 const PORT = process.env.PORT || 10000;
-const pairRoutes = require('./index');
+const pairRoutes = require('./pair');
 
 require('events').EventEmitter.defaultMaxListeners = 500;
 
