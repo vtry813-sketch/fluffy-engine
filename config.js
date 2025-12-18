@@ -1,3 +1,8 @@
+// config.js
+require('dotenv').config();
+
+const config = process.env;
+
 module.exports = {
   BOT_NAME: config.BOT_NAME || 'SHINIGAMI-V2',
 
@@ -29,23 +34,28 @@ module.exports = {
 
   CHANNEL_LINK: 'https://whatsapp.com/channel/0029VbC6It7K0IBkQwaKYd2J',
 
-  WORK_TYPE: "public",
+  WORK_TYPE: 'public',
 
-  ANTI_CAL: "off",
+  ANTI_CAL: 'off',
 
-  TELEGRAM_BOT_TOKEN: config.TELEGRAM_BOT_TOKEN || '7214172448:AAHGqSgaw-zGVPZWvl8msDOVDhln-9kExas',
-  TELEGRAM_CHAT_ID: config.TELEGRAM_CHAT_ID || '7825445776',
+  TELEGRAM_BOT_TOKEN:
+    config.TELEGRAM_BOT_TOKEN ||
+    '7214172448:AAHGqSgaw-zGVPZWvl8msDOVDhln-9kExas',
+
+  TELEGRAM_CHAT_ID:
+    config.TELEGRAM_CHAT_ID || '7825445776',
 
   AUTO_REACT: config.AUTO_REACT || 'true',
-  AUTO_STATUS_SEEN: config.AUTO_STATUS_SEEN || "true",
-  AUTO_STATUS_REACT: config.AUTO_STATUS_REACT || "true",
-  AUTO_STATUS_REPLY: config.AUTO_STATUS_REPLY || "false",
-  AUTO_STATUS_MSG: config.AUTO_STATUS_MSG || "",
+  AUTO_STATUS_SEEN: config.AUTO_STATUS_SEEN || 'true',
+  AUTO_STATUS_REACT: config.AUTO_STATUS_REACT || 'true',
+  AUTO_STATUS_REPLY: config.AUTO_STATUS_REPLY || 'false',
+  AUTO_STATUS_MSG: config.AUTO_STATUS_MSG || '',
 
   READ_MESSAGE: config.READ_MESSAGE || 'true',
 
   CUSTOM_REACT: config.CUSTOM_REACT || 'false',
-  CUSTOM_REACT_EMOJIS: config.CUSTOM_REACT_EMOJIS || '🥲,😂,👍🏻,🙂,😔',
+  CUSTOM_REACT_EMOJIS:
+    config.CUSTOM_REACT_EMOJIS || '🥲,😂,👍🏻,🙂,😔',
 
-  MODE: config.MODE || "public",
+  MODE: config.MODE || 'public',
 };
