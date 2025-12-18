@@ -6,7 +6,7 @@ cmd({
   pattern: "video",
   alias: ["ytmp4", "v"],
   desc: "Download YouTube videos by name or keyword",
-  category: "media",
+  category: "download",
   react: "🎬",
   filename: __filename
 }, async (conn, mek, m, { from, q }) => {
