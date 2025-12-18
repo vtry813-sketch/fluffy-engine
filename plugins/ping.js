@@ -5,7 +5,7 @@ cmd({
     pattern: "ping",
     alias: ["speed","pong"],use: '.ping',
     desc: "Check bot's response time.",
-    category: "main",
+    category: "general",
     react: "⚡",
     filename: __filename
 },
