@@ -1,13 +1,13 @@
 
 {
-  "name": "BILAL-MD",
+  "name": "SHINIGAMI-MD",
   "version": "2.0.0",
-  "description": "A WhatsApp Bot Created By BILAL KING",
+  "description": "A WhatsApp Bot Created By shinigami-md",
   "main": "inconnu.js",
   "scripts": {
-    "start": "pm2 start inconnu.js --deep-monitoring --attach --name BILAL-MD",
-    "stop": "pm2 stop BILAL-MD",
-    "restart": "pm2 restart BILAL-MD"
+    "start": "pm2 start inconnu.js --deep-monitoring --attach --name shinigami-md",
+    "stop": "pm2 stop shinigami-md",
+    "restart": "pm2 restart shinigami-md"
   },
   "dependencies": {
     "@whiskeysockets/baileys": "npm:angularsockets",
