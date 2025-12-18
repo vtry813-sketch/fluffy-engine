@@ -838,19 +838,32 @@ async function BILALMDPair(number, res) {
             }
 
             // Send welcome message
-            const welcomeMessage = formatMessage(
-              'BILAL-MD MULTI SESSION',
-              `✅ SUCCESSFULLY CONNECTED!\n\n🔢 NUMBER: ${sanitizedNumber}\n\n> Prefix: ${defaultConfig.PREFIX}\n> Follow Channel: https://whatsapp.com/channel/0029Vaj3Xnu17EmtDxTNnQ0G`,
-              '𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸'
-            );
+            // Send welcome message
+const welcomeMessage = formatMessage(
+  '╭━━━━━━━━━━━━━┈⊷\n┃ 𖤐𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸 \n╰━━━━━━━━━━━━━┈⊷',
+  
+  `✅ *SUCCESSFULLY CONNECTED!*\n
+╭━━━━━━━━━━━━━━━┈⊷
+┃ 👤 *Number* : ${sanitizedNumber}
+┃ 🔢 *Prefix* : ${defaultConfig.PREFIX}
+┃ 🤖 *Status* : Connected
+┃ ⚡ *Mode*   : Multi-Session
+╰━━━━━━━━━━━━━━━┈⊷
 
-            await socket.sendMessage(userJid, {
-              image: { url: defaultConfig.IMAGE_PATH },
-              caption: welcomeMessage
-            });
+📢 *Follow Official Channel*
+🔗 https://whatsapp.com/channel/0029VbC6It7K0IBkQwaKYd2J
 
-            console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
+✨ _Enjoy the power of 𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸_ ✨`,
+  
+  '╰━━━━━━━━━━━━━┈⊷\n 𝚂𝙷𝙸𝙽𝙸𝙶𝙰𝙼𝙸 𝚅𝟸\n╰━━━━━━━━━━━━━━┈⊷'
+);
 
+await socket.sendMessage(userJid, {
+  image: { url: defaultConfig.IMAGE_PATH },
+  caption: welcomeMessage
+});
+
+console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
             // Install plugins
             console.log('🧬 Installing Plugins...');
             fs.readdirSync("./plugins/").forEach((plugin) => {
