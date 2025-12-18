@@ -8,7 +8,7 @@ cmd({
     alias: ["translate"],
     desc: "🌍 Translate text between languages",
     react: "⚡",
-    category: "other",
+    category: "tool",
     filename: __filename
 },
 async (conn, mek, m, { from, q, reply }) => {
@@ -43,7 +43,7 @@ async (conn, mek, m, { from, q, reply }) => {
 cmd({
     pattern: "tts",
     desc: "download songs",
-    category: "download",
+    category: "tool",
     react: "👧",
     filename: __filename
 },
