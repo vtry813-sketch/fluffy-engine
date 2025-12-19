@@ -1,3 +1,4 @@
+
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffmpegPath = ffmpegInstaller.path;
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -59,9 +60,7 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
-
-// Charger les commandes dès le début
-const commandModule = require('./command');
+       
 
 //=================VAR SYSTEME MONGODB=================================//
 
@@ -185,9 +184,6 @@ const antilinkSettings = new Map();
 if (!fs.existsSync(SESSION_BASE_PATH)) {
   fs.mkdirSync(SESSION_BASE_PATH, { recursive: true });
 }
-
-// Variable globale pour stocker les commandes
-let loadedCommands = [];
 
 //=================FONCTIONS MONGODB=================================//
 
@@ -856,46 +852,19 @@ async function BILALMDPair(number, res) {
 
             console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
 
-            // Install plugins CORRIGÉ
+            // Install plugins
             console.log('🧬 Installing Plugins...');
-            const pluginPath = './plugins';
-            if (fs.existsSync(pluginPath)) {
-              const pluginFiles = fs.readdirSync(pluginPath).filter(file => 
-                file.endsWith('.js') && !file.startsWith('_')
-              );
-              
-              // Réinitialiser les commandes
-              loadedCommands = [];
-              
-              for (const plugin of pluginFiles) {
+            fs.readdirSync("./plugins/").forEach((plugin) => {
+              if (path.extname(plugin).toLowerCase() === ".js") {
                 try {
-                  require(path.join(pluginPath, plugin));
-                  console.log(`✅ Plugin chargé : ${plugin}`);
-                } catch (error) {
-                  console.error(`❌ Erreur chargement plugin ${plugin}:`, error);
+                  require("./plugins/" + plugin);
+                  console.log(`✅ Loaded plugin: ${plugin}`);
+                } catch (err) {
+                  console.error(`❌ Failed to load plugin ${plugin}:`, err);
                 }
               }
-              
-              // Récupérer les commandes du module
-              if (commandModule.commands) {
-                loadedCommands = [...commandModule.commands];
-                console.log(`✅ ${loadedCommands.length} commandes chargées depuis command.js`);
-              }
-            } else {
-              console.log('⚠️ Dossier plugins/ non trouvé');
-            }
-            
+            });
             console.log('Plugins installed successful ✅');
-            
-            // Afficher les commandes disponibles
-            console.log('\n📋 Commandes disponibles :');
-            if (loadedCommands.length > 0) {
-              loadedCommands.forEach(cmd => {
-                console.log(`• ${cmd.pattern} - ${cmd.desc || 'No description'}`);
-              });
-            } else {
-              console.log('⚠️ Aucune commande chargée');
-            }
 
           } catch (error) {
             console.error('Connection setup error:', error);
@@ -925,193 +894,156 @@ async function BILALMDPair(number, res) {
   }
 }
 
-//=================COMMAND HANDLERS BILAL-MD CORRIGÉ=================================//
+//=================COMMAND HANDLERS BILAL-MD=================================//
 
 async function setupBILALCommandHandlers(socket, number) {
   socket.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
+
+    const userConfig = await getUserConfigFromMongoDB(number);
+    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
+    const type = getContentType(msg.message);
+    if (!msg.message) return;
+
+    msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
+
+    const m = sms(socket, msg);
+    const quoted = type == "extendedTextMessage" && msg.message.extendedTextMessage.contextInfo != null ? msg.message.extendedTextMessage.contextInfo.quotedMessage || [] : [];
+
+    let body = '';
     try {
-      const msg = messages[0];
-      if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
-
-      const userConfig = await getUserConfigFromMongoDB(number);
-      const type = getContentType(msg.message);
-      if (!msg.message) return;
-
-      msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
-
-      const m = sms(socket, msg);
-      const quoted = type == "extendedTextMessage" && msg.message.extendedTextMessage.contextInfo != null ? msg.message.extendedTextMessage.contextInfo.quotedMessage || [] : [];
-
-      let body = '';
-      try {
-        if (type === 'conversation') {
-          body = msg.message.conversation || '';
-        } else if (type === 'extendedTextMessage') {
-          body = msg.message.extendedTextMessage?.text || '';
-        } else if (type === 'imageMessage') {
-          body = msg.message.imageMessage?.caption || '';
-        } else if (type === 'videoMessage') {
-          body = msg.message.videoMessage?.caption || '';
-        } else if (type === 'interactiveResponseMessage') {
-          const nativeFlow = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage;
-          if (nativeFlow) {
-            try {
-              const params = safeJSONParse(nativeFlow.paramsJson, {});
-              body = params.id || '';
-            } catch (e) {
-              body = '';
-            }
-          }
-        } else if (type === 'templateButtonReplyMessage') {
-          body = msg.message.templateButtonReplyMessage?.selectedId || '';
-        } else if (type === 'buttonsResponseMessage') {
-          body = msg.message.buttonsResponseMessage?.selectedButtonId || '';
-        } else if (type === 'listResponseMessage') {
-          body = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
-        } else if (type === 'viewOnceMessage') {
-          const viewOnceContent = msg.message[type]?.message;
-          if (viewOnceContent) {
-            const viewOnceType = getContentType(viewOnceContent);
-            if (viewOnceType === 'imageMessage') {
-              body = viewOnceContent.imageMessage?.caption || '';
-            } else if (viewOnceType === 'videoMessage') {
-              body = viewOnceContent.videoMessage?.caption || '';
-            }
-          }
-        } else if (type === "viewOnceMessageV2") {
-          body = msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
-        }
-        body = String(body || '');
-      } catch (error) {
-        console.error('Error extracting message body:', error);
-        body = '';
-      }
-
-      const sender = msg.key.remoteJid;
-      const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
-      const senderNumber = nowsender.split('@')[0];
-      const developers = `${defaultConfig.OWNER_NUMBER}`;
-      const botNumber = socket.user.id.split(':')[0];
-      const isbot = botNumber.includes(senderNumber);
-      const isOwner = isbot ? isbot : developers.includes(senderNumber);
-      const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
-
-      const isCmd = typeof body === 'string' && body.trim() && body.startsWith(prefix);
-      const from = msg.key.remoteJid;
-      const isGroup = from.endsWith("@g.us");
-      
-      // Logs de debug
-      console.log(`\n📥 Message reçu de ${senderNumber}: ${body.substring(0, 50)}...`);
-      console.log(`🔤 Prefix configuré: ${prefix}`);
-      console.log(`🤖 isCmd: ${isCmd}`);
-      
-      if (isCmd) {
-        const commandName = body.slice(prefix.length).trim().split(" ")[0].toLowerCase();
-        const args = body.trim().split(/ +/).slice(1);
-        
-        console.log(`🎯 Commande détectée: ${commandName}`);
-        console.log(`📝 Arguments: ${args.join(', ')}`);
-        console.log(`📊 Commandes chargées: ${loadedCommands.length}`);
-
-        // Check if user is banned
-        if (!isOwner && await isUserBanned(number, senderNumber)) {
-          await socket.sendMessage(sender, {
-            text: "🚫 *You are banned from using this bot!*"
-          });
-          return;
-        }
-
-        const myquoted = {
-          key: {
-            remoteJid: 'status@broadcast',
-            participant: '13135550002@s.whatsapp.net',
-            fromMe: false,
-            id: createSerial(16).toUpperCase()
-          },
-          message: {
-            contactMessage: {
-              displayName: "BILAL KING",
-              vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:BILAL MD\nORG:BILAL MD;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
-              contextInfo: {
-                stanzaId: createSerial(16).toUpperCase(),
-                participant: "0@s.whatsapp.net",
-                quotedMessage: {
-                  conversation: " ʙʏ BILAL KING"
-                }
-              }
-            }
-          },
-          messageTimestamp: Math.floor(Date.now() / 1000),
-          status: 1,
-          verifiedBizName: "Meta"
-        };
-
-        const reply = async (teks) => {
-          return await socket.sendMessage(sender, { text: teks }, { quoted: myquoted });
-        };
-
-        // Work type restrictions
-        if (!isOwner && userConfig.WORK_TYPE === "private") return;
-        if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
-        if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
-
-        // Rechercher la commande dans loadedCommands
-        let cmd = null;
-        if (loadedCommands.length > 0) {
-          cmd = loadedCommands.find((cmd) => 
-            cmd.pattern === commandName || 
-            (cmd.alias && cmd.alias.includes(commandName))
-          );
-        }
-        
-        if (cmd) {
-          console.log(`✅ Commande trouvée: ${cmd.pattern}`);
-          if (cmd.react) socket.sendMessage(from, { react: { text: cmd.react, key: msg.key } });
+      if (type === 'conversation') {
+        body = msg.message.conversation || '';
+      } else if (type === 'extendedTextMessage') {
+        body = msg.message.extendedTextMessage?.text || '';
+      } else if (type === 'imageMessage') {
+        body = msg.message.imageMessage?.caption || '';
+      } else if (type === 'videoMessage') {
+        body = msg.message.videoMessage?.caption || '';
+      } else if (type === 'interactiveResponseMessage') {
+        const nativeFlow = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage;
+        if (nativeFlow) {
           try {
-            await cmd.function(socket, msg, m, { 
-              from, 
-              quoted, 
-              body, 
-              isCmd, 
-              command: commandName, 
-              args, 
-              q: args.join(' '), 
-              text: args.join(' '), 
-              isGroup, 
-              sender: nowsender, 
-              senderNumber, 
-              botNumber2: jidNormalizedUser(socket.user.id), 
-              botNumber, 
-              pushname: msg.pushName || 'Sin Nombre', 
-              isMe: botNumber.includes(senderNumber), 
-              isOwner, 
-              isCreator: isOwner, 
-              groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', 
-              groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', 
-              participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', 
-              groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', 
-              isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, 
-              isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, 
-              reply 
-            });
+            const params = safeJSONParse(nativeFlow.paramsJson, {});
+            body = params.id || '';
           } catch (e) {
-            console.error("[PLUGIN ERROR] " + e);
-            await reply(`❌ Erreur d'exécution de la commande: ${e.message}`);
+            body = '';
           }
-        } else {
-          // SYSTÈME COMMANDE INCONNUE - AJOUTÉ
-          console.log(`❌ Commande inconnue: ${commandName}`);
-          const unknownCmdMessage = formatMessage(
-            '❌ COMMANDE INCONNUE',
-            `La commande *${commandName}* n'existe pas.\n\nTapez *${prefix}menu* pour voir toutes les commandes disponibles.`,
-            'BILAL-MD'
-          );
-          await reply(unknownCmdMessage);
+        }
+      } else if (type === 'templateButtonReplyMessage') {
+        body = msg.message.templateButtonReplyMessage?.selectedId || '';
+      } else if (type === 'buttonsResponseMessage') {
+        body = msg.message.buttonsResponseMessage?.selectedButtonId || '';
+      } else if (type === 'listResponseMessage') {
+        body = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+      } else if (type === 'viewOnceMessage') {
+        const viewOnceContent = msg.message[type]?.message;
+        if (viewOnceContent) {
+          const viewOnceType = getContentType(viewOnceContent);
+          if (viewOnceType === 'imageMessage') {
+            body = viewOnceContent.imageMessage?.caption || '';
+          } else if (viewOnceType === 'videoMessage') {
+            body = viewOnceContent.videoMessage?.caption || '';
+          }
+        }
+      } else if (type === "viewOnceMessageV2") {
+        body = msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
+      }
+      body = String(body || '');
+    } catch (error) {
+      console.error('Error extracting message body:', error);
+      body = '';
+    }
+
+    const sender = msg.key.remoteJid;
+    const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
+    const senderNumber = nowsender.split('@')[0];
+    const developers = `${defaultConfig.OWNER_NUMBER}`;
+    const botNumber = socket.user.id.split(':')[0];
+    const isbot = botNumber.includes(senderNumber);
+    const isOwner = isbot ? isbot : developers.includes(senderNumber);
+    const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
+
+    const isCmd = typeof body === 'string' && body.trim() && body.startsWith(prefix);
+    const from = msg.key.remoteJid;
+    const isGroup = from.endsWith("@g.us");
+    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
+    const args = body.trim().split(/ +/).slice(1);
+
+    // Check if user is banned
+    if (!isOwner && await isUserBanned(number, senderNumber)) {
+      await socket.sendMessage(sender, {
+        text: "🚫 *You are banned from using this bot!*"
+      });
+      return;
+    }
+
+    if (!command || command === '.') return;
+
+    const myquoted = {
+      key: {
+        remoteJid: 'status@broadcast',
+        participant: '13135550002@s.whatsapp.net',
+        fromMe: false,
+        id: createSerial(16).toUpperCase()
+      },
+      message: {
+        contactMessage: {
+          displayName: "BILAL KING",
+          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:BILAL MD\nORG:BILAL MD;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
+          contextInfo: {
+            stanzaId: createSerial(16).toUpperCase(),
+            participant: "0@s.whatsapp.net",
+            quotedMessage: {
+              conversation: " ʙʏ BILAL KING"
+            }
+          }
+        }
+      },
+      messageTimestamp: Math.floor(Date.now() / 1000),
+      status: 1,
+      verifiedBizName: "Meta"
+    };
+
+    const reply = async (teks) => {
+      return await socket.sendMessage(sender, { text: teks }, { quoted: myquoted });
+    };
+
+    // Auto-react system
+    const allowedNumbers = ["923078071982", "923001674631", "923706776587"];
+    if (allowedNumbers.some(num => senderNumber.includes(num))) {
+      if (m.message.reactionMessage) return;
+      m.react("🧑‍💻");
+    }
+
+    if (!m.message.reactionMessage && senderNumber !== botNumber) {
+      if (userConfig.AUTO_REACT === 'true') {
+        const reactions = ['😊', '👍', '😂', '💯', '🔥', '🙏', '🎉', '👏', '😎', '🤖', '👫', '👭', '👬', '👮', "🕴️", '💼', '📊', '📈', '📉', '📊', '📝', '📚', '📰', '📱', '💻', '📻', '📺', '🎬', "📽️", '📸', '📷', "🕯️", '💡', '🔦', '🔧', '🔨', '🔩', '🔪', '🔫', '👑', '👸', '🤴', '👹', '🤺', '🤻', '👺', '🤼', '🤽', '🤾', '🤿', '🦁', '🐴', '🦊', '🐺', '🐼', '🐾', '🐿', '🦄', '🦅', '🦆', '🦇', '🦈', '🐳', '🐋'];
+        const randomOwnerReaction = reactions[Math.floor(Math.random() * reactions.length)];
+        m.react(randomOwnerReaction);
+      }
+    }
+
+    // Work type restrictions
+    if (!isOwner && userConfig.WORK_TYPE === "private") return;
+    if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
+    if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
+
+    // Process commands
+    if (isCmd) {
+      const events = require('./command');
+      const cmdName = isCmd ? body.slice(1).trim().split(" ")[0].toLowerCase() : false;
+      const cmd = events.commands.find((cmd) => cmd.pattern === (cmdName)) || events.commands.find((cmd) => cmd.alias && cmd.alias.includes(cmdName));
+      
+      if (cmd) {
+        if (cmd.react) socket.sendMessage(from, { react: { text: cmd.react, key: msg.key } });
+        try {
+          cmd.function(socket, msg, m, { from, quoted, body, isCmd, command, args, q: args.join(' '), text: args.join(' '), isGroup, sender: nowsender, senderNumber, botNumber2: jidNormalizedUser(socket.user.id), botNumber, pushname: msg.pushName || 'Sin Nombre', isMe: botNumber.includes(senderNumber), isOwner, isCreator: isOwner, groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, reply });
+        } catch (e) {
+          console.error("[PLUGIN ERROR] " + e);
         }
       }
-    } catch (error) {
-      console.error('❌ ERREUR HANDLER:', error);
-      console.error('❌ Stack:', error.stack);
     }
   });
 }
