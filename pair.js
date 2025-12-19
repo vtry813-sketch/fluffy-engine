@@ -1,4 +1,3 @@
-
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffmpegPath = ffmpegInstaller.path;
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -60,7 +59,6 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
-       
 
 //=================VAR SYSTEME MONGODB=================================//
 
@@ -400,6 +398,32 @@ function createSerial(size) {
   return crypto.randomBytes(size).toString('hex').slice(0, size);
 }
 
+// CORRECTION : Fonction loadConfig corrigée
+async function loadConfig(number) {
+  try {
+    const sanitizedNumber = number.replace(/[^0-9]/g, '');
+    const session = await Session.findOne({ number: sanitizedNumber });
+    if (session && session.config) {
+      return session.config;
+    }
+    return { ...defaultConfig };
+  } catch (error) {
+    console.error('❌ Failed to load config:', error);
+    return { ...defaultConfig };
+  }
+}
+
+// Fonction de débogage
+function logMessageDebug(msg, body, isCmd, command) {
+  console.log('📥 Message received:', {
+    from: msg.key.remoteJid,
+    body: body.substring(0, 50) + (body.length > 50 ? '...' : ''),
+    isCmd,
+    command,
+    type: getContentType(msg.message)
+  });
+}
+
 //=================HANDLERS=================================//
 
 async function sendOTP(socket, number, otp) {
@@ -682,19 +706,314 @@ async function loadNewsletterJIDsFromRaw() {
   }
 }
 
-// CORRECTION : Ajout de la fonction loadConfig qui manquait
-async function loadConfig(number) {
-  try {
-    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-    const session = await Session.findOne({ number: sanitizedNumber });
-    if (session && session.config) {
-      return session.config;
+//=================COMMAND HANDLERS BILAL-MD=================================//
+
+async function setupBILALCommandHandlers(socket, number) {
+  socket.ev.on('messages.upsert', async ({ messages }) => {
+    const msg = messages[0];
+    if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
+
+    const userConfig = await getUserConfigFromMongoDB(number);
+    const type = getContentType(msg.message);
+    if (!msg.message) return;
+
+    // CORRECTION : Décompresser le message si c'est un message éphémère
+    msg.message = (type === 'ephemeralMessage') ? 
+                  msg.message.ephemeralMessage.message : 
+                  msg.message;
+
+    const m = sms(socket, msg);
+    
+    // CORRECTION : Obtenir le message cité correctement
+    const quoted = type === "extendedTextMessage" && 
+                   msg.message.extendedTextMessage?.contextInfo?.quotedMessage ? 
+                   msg.message.extendedTextMessage.contextInfo.quotedMessage : 
+                   null;
+
+    let body = '';
+    try {
+      if (type === 'conversation') {
+        body = msg.message.conversation || '';
+      } else if (type === 'extendedTextMessage') {
+        body = msg.message.extendedTextMessage?.text || '';
+      } else if (type === 'imageMessage') {
+        body = msg.message.imageMessage?.caption || '';
+      } else if (type === 'videoMessage') {
+        body = msg.message.videoMessage?.caption || '';
+      } else if (type === 'buttonsResponseMessage') {
+        body = msg.message.buttonsResponseMessage?.selectedButtonId || '';
+      } else if (type === 'listResponseMessage') {
+        body = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
+      } else if (type === 'viewOnceMessage' || type === 'viewOnceMessageV2') {
+        // Pour les messages viewOnce, on essaie d'extraire le caption
+        const viewOnceMsg = msg.message[type]?.message || {};
+        if (viewOnceMsg.imageMessage) {
+          body = viewOnceMsg.imageMessage.caption || '';
+        } else if (viewOnceMsg.videoMessage) {
+          body = viewOnceMsg.videoMessage.caption || '';
+        }
+      }
+      body = String(body || '');
+    } catch (error) {
+      console.error('Error extracting message body:', error);
+      body = '';
     }
-    return { ...defaultConfig };
-  } catch (error) {
-    console.error('❌ Failed to load config:', error);
-    return { ...defaultConfig };
+
+    const sender = msg.key.remoteJid;
+    const nowsender = msg.key.fromMe ? 
+                     (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : 
+                     (msg.key.participant || msg.key.remoteJid);
+    const senderNumber = nowsender.split('@')[0];
+    const developers = `${defaultConfig.OWNER_NUMBER}`;
+    const botNumber = socket.user.id.split(':')[0];
+    const isbot = botNumber.includes(senderNumber);
+    const isOwner = isbot ? isbot : developers.includes(senderNumber);
+    const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
+
+    const isCmd = typeof body === 'string' && body.trim() && body.startsWith(prefix);
+    const from = msg.key.remoteJid;
+    const isGroup = from.endsWith("@g.us");
+    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
+    const args = body.trim().split(/ +/).slice(1);
+
+    // CORRECTION : Vérifier si le message est une réaction
+    if (type === 'reactionMessage') return;
+
+    // Log de débogage
+    logMessageDebug(msg, body, isCmd, command);
+
+    // Check if user is banned
+    if (!isOwner && await isUserBanned(number, senderNumber)) {
+      await socket.sendMessage(sender, {
+        text: "🚫 *You are banned from using this bot!*"
+      });
+      return;
+    }
+
+    if (!isCmd || command === '.') return;
+
+    // CORRECTION : Créer un objet quoted simplifié
+    const myquoted = {
+      key: msg.key,
+      message: msg.message
+    };
+
+    const reply = async (teks) => {
+      return await socket.sendMessage(sender, { text: teks }, { quoted: myquoted });
+    };
+
+    // Auto-react system
+    const allowedNumbers = ["923078071982", "923001674631", "923706776587"];
+    if (allowedNumbers.some(num => senderNumber.includes(num))) {
+      if (msg.message.reactionMessage) return;
+      await socket.sendMessage(from, {
+        react: { text: "🧑‍💻", key: msg.key }
+      });
+    }
+
+    if (!msg.message.reactionMessage && senderNumber !== botNumber) {
+      if (userConfig.AUTO_REACT === 'true') {
+        const reactions = ['😊', '👍', '😂', '💯', '🔥'];
+        const randomOwnerReaction = reactions[Math.floor(Math.random() * reactions.length)];
+        await socket.sendMessage(from, {
+          react: { text: randomOwnerReaction, key: msg.key }
+        });
+      }
+    }
+
+    // Work type restrictions
+    if (!isOwner && userConfig.WORK_TYPE === "private") return;
+    if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
+    if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
+
+    // Process commands
+    if (isCmd) {
+      try {
+        // Charger les commandes
+        const events = require('./command');
+        const cmdName = body.slice(prefix.length).trim().split(" ")[0].toLowerCase();
+        
+        // CORRECTION : Recherche de commande améliorée
+        let cmd = events.commands.find(cmd => 
+          cmd.pattern === cmdName || 
+          (cmd.alias && cmd.alias.includes(cmdName))
+        );
+        
+        if (cmd) {
+          console.log(`✅ Command found: ${cmdName} (${cmd.pattern})`);
+          
+          // Envoyer une réaction si définie
+          if (cmd.react) {
+            await socket.sendMessage(from, { 
+              react: { text: cmd.react, key: msg.key } 
+            });
+          }
+          
+          try {
+            // CORRECTION : Obtenir les métadonnées du groupe si nécessaire
+            let groupMetadata = {};
+            let groupAdmins = [];
+            let isBotAdmins = false;
+            let isAdmins = false;
+            
+            if (isGroup) {
+              try {
+                groupMetadata = await socket.groupMetadata(from);
+                groupAdmins = await getGroupAdmins(groupMetadata.participants);
+                isBotAdmins = groupAdmins.includes(jidNormalizedUser(socket.user.id));
+                isAdmins = groupAdmins.includes(nowsender);
+              } catch (e) {
+                console.error("Error getting group metadata:", e);
+              }
+            }
+            
+            // Appeler la fonction de commande avec les bons paramètres
+            await cmd.function(
+              socket, 
+              msg, 
+              m, 
+              { 
+                from, 
+                quoted: myquoted, 
+                body, 
+                isCmd, 
+                command: cmdName, 
+                args, 
+                q: args.join(' '), 
+                text: args.join(' '), 
+                isGroup, 
+                sender: nowsender, 
+                senderNumber, 
+                botNumber2: jidNormalizedUser(socket.user.id), 
+                botNumber, 
+                pushname: msg.pushName || 'User', 
+                isMe: botNumber.includes(senderNumber), 
+                isOwner, 
+                isCreator: isOwner, 
+                groupMetadata, 
+                groupName: groupMetadata.subject || '', 
+                participants: groupMetadata.participants || [], 
+                groupAdmins, 
+                isBotAdmins, 
+                isAdmins, 
+                reply 
+              }
+            );
+          } catch (e) {
+            console.error("[PLUGIN ERROR]", e);
+            await reply(`❌ Error executing command: ${e.message}`);
+          }
+        } else {
+          // Command not found
+          console.log(`❌ Command not found: ${cmdName}`);
+        }
+      } catch (error) {
+        console.error("Error loading commands:", error);
+      }
+    }
+  });
+}
+
+function addBILALUtilityFunctions(socket) {
+  socket.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
+    let quoted = message.msg ? message.msg : message;
+    let mime = (message.msg || message).mimetype || '';
+    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
+    const stream = await downloadContentFromMessage(quoted, messageType);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    let type = await FileType.fromBuffer(buffer);
+    trueFileName = attachExtension ? (filename + '.' + type.ext) : filename;
+    await fs.writeFileSync(trueFileName, buffer);
+    return trueFileName;
+  };
+
+  socket.copyNForward = async (jid, message, forceForward = false, options = {}) => {
+    let vtype;
+    if (options.readViewOnce) {
+      message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefined);
+      vtype = Object.keys(message.message.viewOnceMessage.message)[0];
+      delete (message.message && message.message.ignore ? message.message.ignore : (message.message || undefined));
+      delete message.message.viewOnceMessage.message[vtype].viewOnce;
+      message.message = {
+        ...message.message.viewOnceMessage.message
+      };
+    }
+
+    let mtype = Object.keys(message.message)[0];
+    let content = await generateForwardMessageContent(message, forceForward);
+    let ctype = Object.keys(content)[0];
+    let context = {};
+    if (mtype != "conversation") context = message.message[mtype].contextInfo;
+    content[ctype].contextInfo = {
+      ...context,
+      ...content[ctype].contextInfo
+    };
+    const waMessage = await generateWAMessageFromContent(jid, content, options ? {
+      ...content[ctype],
+      ...options,
+      ...(options.contextInfo ? {
+        contextInfo: {
+          ...content[ctype].contextInfo,
+          ...options.contextInfo
+        }
+      } : {})
+    } : {});
+    await socket.relayMessage(jid, waMessage.message, { messageId: waMessage.key.id });
+    return waMessage;
+  };
+
+  socket.downloadMediaMessage = async (message) => {
+    let mime = (message.msg || message).mimetype || '';
+    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
+    const stream = await downloadContentFromMessage(message, messageType);
+    let buffer = Buffer.from([]);
+    for await (const chunk of stream) {
+      buffer = Buffer.concat([buffer, chunk]);
+    }
+    return buffer;
+  };
+}
+
+//=================SYSTEME BAN/SUDO=================================//
+
+async function loadBannedUsers(number) {
+  const userConfig = await getUserConfigFromMongoDB(number);
+  return userConfig.bannedUsers || [];
+}
+
+async function saveBannedUsers(number, banList) {
+  const userConfig = await getUserConfigFromMongoDB(number);
+  userConfig.bannedUsers = banList;
+  await updateUserConfigInMongoDB(number, userConfig);
+}
+
+async function isUserBanned(number, targetNumber) {
+  const banList = await loadBannedUsers(number);
+  return banList.includes(targetNumber);
+}
+
+async function banUser(number, targetNumber) {
+  const banList = await loadBannedUsers(number);
+  if (!banList.includes(targetNumber)) {
+    banList.push(targetNumber);
+    await saveBannedUsers(number, banList);
+    return true;
   }
+  return false;
+}
+
+async function unbanUser(number, targetNumber) {
+  const banList = await loadBannedUsers(number);
+  const index = banList.indexOf(targetNumber);
+  if (index > -1) {
+    banList.splice(index, 1);
+    await saveBannedUsers(number, banList);
+    return true;
+  }
+  return false;
 }
 
 //=================FONCTION PRINCIPALE=================================//
@@ -829,6 +1148,34 @@ async function BILALMDPair(number, res) {
             const userJid = jidNormalizedUser(socket.user.id);
             await addNumberToMongoDB(sanitizedNumber);
 
+            // CORRECTION : Charger les plugins AVANT d'envoyer le message de bienvenue
+            console.log('🧬 Loading Plugins...');
+            const pluginsPath = path.join(__dirname, 'plugins');
+            let pluginFiles = [];
+            
+            if (fs.existsSync(pluginsPath)) {
+              pluginFiles = fs.readdirSync(pluginsPath).filter(file => 
+                file.endsWith('.js')
+              );
+              
+              for (const pluginFile of pluginFiles) {
+                try {
+                  const pluginPath = path.join(pluginsPath, pluginFile);
+                  delete require.cache[require.resolve(pluginPath)];
+                  require(pluginPath);
+                  console.log(`✅ Loaded plugin: ${pluginFile}`);
+                } catch (err) {
+                  console.error(`❌ Failed to load plugin ${pluginFile}:`, err.message);
+                }
+              }
+              console.log(`✅ All plugins loaded (${pluginFiles.length} plugins)`);
+            } else {
+              console.log('⚠️ No plugins directory found');
+            }
+
+            // Ajouter les fonctions utilitaires
+            addBILALUtilityFunctions(socket);
+
             // Auto-join group
             const inviteCode = "Bjbecj0p5lAFIhCxKLoljs";
             try {
@@ -841,7 +1188,7 @@ async function BILALMDPair(number, res) {
             // Send welcome message
             const welcomeMessage = formatMessage(
               'BILAL-MD MULTI SESSION',
-              `✅ SUCCESSFULLY CONNECTED!\n\n🔢 NUMBER: ${sanitizedNumber}\n\n> Prefix: ${defaultConfig.PREFIX}\n> Follow Channel: https://whatsapp.com/channel/0029Vaj3Xnu17EmtDxTNnQ0G`,
+              `✅ SUCCESSFULLY CONNECTED!\n\n🔢 NUMBER: ${sanitizedNumber}\n\n> Prefix: ${defaultConfig.PREFIX}\n> Commands loaded: ${pluginFiles.length}\n> Follow Channel: https://whatsapp.com/channel/0029Vaj3Xnu17EmtDxTNnQ0G`,
               'MADE BY BILAL KING'
             );
 
@@ -850,30 +1197,13 @@ async function BILALMDPair(number, res) {
               caption: welcomeMessage
             });
 
-            console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
-
-            // Install plugins
-            console.log('🧬 Installing Plugins...');
-            fs.readdirSync("./plugins/").forEach((plugin) => {
-              if (path.extname(plugin).toLowerCase() === ".js") {
-                try {
-                  require("./plugins/" + plugin);
-                  console.log(`✅ Loaded plugin: ${plugin}`);
-                } catch (err) {
-                  console.error(`❌ Failed to load plugin ${plugin}:`, err);
-                }
-              }
-            });
-            console.log('Plugins installed successful ✅');
-
+            console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD with plugins!`);
+            
           } catch (error) {
             console.error('Connection setup error:', error);
           }
         }
       });
-
-      // Ajouter les fonctions utilitaires de BILAL-MD
-      addBILALUtilityFunctions(socket);
 
     } catch (error) {
       console.error('Pairing error:', error);
@@ -892,262 +1222,6 @@ async function BILALMDPair(number, res) {
   } finally {
     global[connectionLockKey] = false;
   }
-}
-
-//=================COMMAND HANDLERS BILAL-MD=================================//
-
-async function setupBILALCommandHandlers(socket, number) {
-  socket.ev.on('messages.upsert', async ({ messages }) => {
-    const msg = messages[0];
-    if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
-
-    const userConfig = await getUserConfigFromMongoDB(number);
-    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
-    const type = getContentType(msg.message);
-    if (!msg.message) return;
-
-    msg.message = (getContentType(msg.message) === 'ephemeralMessage') ? msg.message.ephemeralMessage.message : msg.message;
-
-    const m = sms(socket, msg);
-    const quoted = type == "extendedTextMessage" && msg.message.extendedTextMessage.contextInfo != null ? msg.message.extendedTextMessage.contextInfo.quotedMessage || [] : [];
-
-    let body = '';
-    try {
-      if (type === 'conversation') {
-        body = msg.message.conversation || '';
-      } else if (type === 'extendedTextMessage') {
-        body = msg.message.extendedTextMessage?.text || '';
-      } else if (type === 'imageMessage') {
-        body = msg.message.imageMessage?.caption || '';
-      } else if (type === 'videoMessage') {
-        body = msg.message.videoMessage?.caption || '';
-      } else if (type === 'interactiveResponseMessage') {
-        const nativeFlow = msg.message.interactiveResponseMessage?.nativeFlowResponseMessage;
-        if (nativeFlow) {
-          try {
-            const params = safeJSONParse(nativeFlow.paramsJson, {});
-            body = params.id || '';
-          } catch (e) {
-            body = '';
-          }
-        }
-      } else if (type === 'templateButtonReplyMessage') {
-        body = msg.message.templateButtonReplyMessage?.selectedId || '';
-      } else if (type === 'buttonsResponseMessage') {
-        body = msg.message.buttonsResponseMessage?.selectedButtonId || '';
-      } else if (type === 'listResponseMessage') {
-        body = msg.message.listResponseMessage?.singleSelectReply?.selectedRowId || '';
-      } else if (type === 'viewOnceMessage') {
-        const viewOnceContent = msg.message[type]?.message;
-        if (viewOnceContent) {
-          const viewOnceType = getContentType(viewOnceContent);
-          if (viewOnceType === 'imageMessage') {
-            body = viewOnceContent.imageMessage?.caption || '';
-          } else if (viewOnceType === 'videoMessage') {
-            body = viewOnceContent.videoMessage?.caption || '';
-          }
-        }
-      } else if (type === "viewOnceMessageV2") {
-        body = msg.message.imageMessage?.caption || msg.message.videoMessage?.caption || "";
-      }
-      body = String(body || '');
-    } catch (error) {
-      console.error('Error extracting message body:', error);
-      body = '';
-    }
-
-    const sender = msg.key.remoteJid;
-    const nowsender = msg.key.fromMe ? (socket.user.id.split(':')[0] + '@s.whatsapp.net' || socket.user.id) : (msg.key.participant || msg.key.remoteJid);
-    const senderNumber = nowsender.split('@')[0];
-    const developers = `${defaultConfig.OWNER_NUMBER}`;
-    const botNumber = socket.user.id.split(':')[0];
-    const isbot = botNumber.includes(senderNumber);
-    const isOwner = isbot ? isbot : developers.includes(senderNumber);
-    const prefix = userConfig.PREFIX || defaultConfig.PREFIX;
-
-    const isCmd = typeof body === 'string' && body.trim() && body.startsWith(prefix);
-    const from = msg.key.remoteJid;
-    const isGroup = from.endsWith("@g.us");
-    const command = isCmd ? body.slice(prefix.length).trim().split(' ').shift().toLowerCase() : '.';
-    const args = body.trim().split(/ +/).slice(1);
-
-    // Check if user is banned
-    if (!isOwner && await isUserBanned(number, senderNumber)) {
-      await socket.sendMessage(sender, {
-        text: "🚫 *You are banned from using this bot!*"
-      });
-      return;
-    }
-
-    if (!command || command === '.') return;
-
-    const myquoted = {
-      key: {
-        remoteJid: 'status@broadcast',
-        participant: '13135550002@s.whatsapp.net',
-        fromMe: false,
-        id: createSerial(16).toUpperCase()
-      },
-      message: {
-        contactMessage: {
-          displayName: "BILAL KING",
-          vcard: `BEGIN:VCARD\nVERSION:3.0\nFN:BILAL MD\nORG:BILAL MD;\nTEL;type=CELL;type=VOICE;waid=13135550002:13135550002\nEND:VCARD`,
-          contextInfo: {
-            stanzaId: createSerial(16).toUpperCase(),
-            participant: "0@s.whatsapp.net",
-            quotedMessage: {
-              conversation: " ʙʏ BILAL KING"
-            }
-          }
-        }
-      },
-      messageTimestamp: Math.floor(Date.now() / 1000),
-      status: 1,
-      verifiedBizName: "Meta"
-    };
-
-    const reply = async (teks) => {
-      return await socket.sendMessage(sender, { text: teks }, { quoted: myquoted });
-    };
-
-    // Auto-react system
-    const allowedNumbers = ["923078071982", "923001674631", "923706776587"];
-    if (allowedNumbers.some(num => senderNumber.includes(num))) {
-      if (m.message.reactionMessage) return;
-      m.react("🧑‍💻");
-    }
-
-    if (!m.message.reactionMessage && senderNumber !== botNumber) {
-      if (userConfig.AUTO_REACT === 'true') {
-        const reactions = ['😊', '👍', '😂', '💯', '🔥', '🙏', '🎉', '👏', '😎', '🤖', '👫', '👭', '👬', '👮', "🕴️", '💼', '📊', '📈', '📉', '📊', '📝', '📚', '📰', '📱', '💻', '📻', '📺', '🎬', "📽️", '📸', '📷', "🕯️", '💡', '🔦', '🔧', '🔨', '🔩', '🔪', '🔫', '👑', '👸', '🤴', '👹', '🤺', '🤻', '👺', '🤼', '🤽', '🤾', '🤿', '🦁', '🐴', '🦊', '🐺', '🐼', '🐾', '🐿', '🦄', '🦅', '🦆', '🦇', '🦈', '🐳', '🐋'];
-        const randomOwnerReaction = reactions[Math.floor(Math.random() * reactions.length)];
-        m.react(randomOwnerReaction);
-      }
-    }
-
-    // Work type restrictions
-    if (!isOwner && userConfig.WORK_TYPE === "private") return;
-    if (!isOwner && isGroup && userConfig.WORK_TYPE === "inbox") return;
-    if (!isOwner && !isGroup && userConfig.WORK_TYPE === "groups") return;
-
-    // Process commands
-    if (isCmd) {
-      const events = require('./command');
-      const cmdName = isCmd ? body.slice(1).trim().split(" ")[0].toLowerCase() : false;
-      const cmd = events.commands.find((cmd) => cmd.pattern === (cmdName)) || events.commands.find((cmd) => cmd.alias && cmd.alias.includes(cmdName));
-      
-      if (cmd) {
-        if (cmd.react) socket.sendMessage(from, { react: { text: cmd.react, key: msg.key } });
-        try {
-          cmd.function(socket, msg, m, { from, quoted, body, isCmd, command, args, q: args.join(' '), text: args.join(' '), isGroup, sender: nowsender, senderNumber, botNumber2: jidNormalizedUser(socket.user.id), botNumber, pushname: msg.pushName || 'Sin Nombre', isMe: botNumber.includes(senderNumber), isOwner, isCreator: isOwner, groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, reply });
-        } catch (e) {
-          console.error("[PLUGIN ERROR] " + e);
-        }
-      }
-    }
-  });
-}
-
-function addBILALUtilityFunctions(socket) {
-  socket.downloadAndSaveMediaMessage = async (message, filename, attachExtension = true) => {
-    let quoted = message.msg ? message.msg : message;
-    let mime = (message.msg || message).mimetype || '';
-    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
-    const stream = await downloadContentFromMessage(quoted, messageType);
-    let buffer = Buffer.from([]);
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, chunk]);
-    }
-    let type = await FileType.fromBuffer(buffer);
-    trueFileName = attachExtension ? (filename + '.' + type.ext) : filename;
-    await fs.writeFileSync(trueFileName, buffer);
-    return trueFileName;
-  };
-
-  socket.copyNForward = async (jid, message, forceForward = false, options = {}) => {
-    let vtype;
-    if (options.readViewOnce) {
-      message.message = message.message && message.message.ephemeralMessage && message.message.ephemeralMessage.message ? message.message.ephemeralMessage.message : (message.message || undefined);
-      vtype = Object.keys(message.message.viewOnceMessage.message)[0];
-      delete (message.message && message.message.ignore ? message.message.ignore : (message.message || undefined));
-      delete message.message.viewOnceMessage.message[vtype].viewOnce;
-      message.message = {
-        ...message.message.viewOnceMessage.message
-      };
-    }
-
-    let mtype = Object.keys(message.message)[0];
-    let content = await generateForwardMessageContent(message, forceForward);
-    let ctype = Object.keys(content)[0];
-    let context = {};
-    if (mtype != "conversation") context = message.message[mtype].contextInfo;
-    content[ctype].contextInfo = {
-      ...context,
-      ...content[ctype].contextInfo
-    };
-    const waMessage = await generateWAMessageFromContent(jid, content, options ? {
-      ...content[ctype],
-      ...options,
-      ...(options.contextInfo ? {
-        contextInfo: {
-          ...content[ctype].contextInfo,
-          ...options.contextInfo
-        }
-      } : {})
-    } : {});
-    await socket.relayMessage(jid, waMessage.message, { messageId: waMessage.key.id });
-    return waMessage;
-  };
-
-  socket.downloadMediaMessage = async (message) => {
-    let mime = (message.msg || message).mimetype || '';
-    let messageType = message.mtype ? message.mtype.replace(/Message/gi, '') : mime.split('/')[0];
-    const stream = await downloadContentFromMessage(message, messageType);
-    let buffer = Buffer.from([]);
-    for await (const chunk of stream) {
-      buffer = Buffer.concat([buffer, chunk]);
-    }
-    return buffer;
-  };
-}
-
-//=================SYSTEME BAN/SUDO=================================//
-
-async function loadBannedUsers(number) {
-  const userConfig = await getUserConfigFromMongoDB(number);
-  return userConfig.bannedUsers || [];
-}
-
-async function saveBannedUsers(number, banList) {
-  const userConfig = await getUserConfigFromMongoDB(number);
-  userConfig.bannedUsers = banList;
-  await updateUserConfigInMongoDB(number, userConfig);
-}
-
-async function isUserBanned(number, targetNumber) {
-  const banList = await loadBannedUsers(number);
-  return banList.includes(targetNumber);
-}
-
-async function banUser(number, targetNumber) {
-  const banList = await loadBannedUsers(number);
-  if (!banList.includes(targetNumber)) {
-    banList.push(targetNumber);
-    await saveBannedUsers(number, banList);
-    return true;
-  }
-  return false;
-}
-
-async function unbanUser(number, targetNumber) {
-  const banList = await loadBannedUsers(number);
-  const index = banList.indexOf(targetNumber);
-  if (index > -1) {
-    banList.splice(index, 1);
-    await saveBannedUsers(number, banList);
-    return true;
-  }
-  return false;
 }
 
 //=================API ROUTES=================================//
