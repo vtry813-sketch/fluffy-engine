@@ -1,3 +1,4 @@
+
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffmpegPath = ffmpegInstaller.path;
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -20,7 +21,7 @@ const FileType = require('file-type');
 const yts = require('yt-search');
 const TelegramBot = require('node-telegram-bot-api');
 
-// Import des modules de BILAL-MD - CORRIGÉ
+// Import des modules de BILAL-MD
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -42,8 +43,7 @@ const {
   makeInMemoryStore,
   jidDecode,
   fetchLatestBaileysVersion,
-  Browsers,
-  makeCacheableSignalKeyStore  
+  Browsers
 } = require('@whiskeysockets/baileys');
 
 const l = console.log;
@@ -59,7 +59,6 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
-       
 
 //=================VAR SYSTEME MONGODB=================================//
 
@@ -132,7 +131,7 @@ const defaultConfig = {
 const telegramBot = new TelegramBot(defaultConfig.TELEGRAM_BOT_TOKEN, { polling: false });
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kaviduinduwara:kavidu2008@cluster0.bqmspdf.mongodb.net/soloBot?retryWrites=true&w=majority&appName=Cluster0';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://maiouzaka_db_user:CQF6w051sqKzPI9D@akuma.k';
 mongoose.connect(MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
@@ -681,21 +680,6 @@ async function loadNewsletterJIDsFromRaw() {
   }
 }
 
-// CORRECTION : Ajout de la fonction loadConfig qui manquait
-async function loadConfig(number) {
-  try {
-    const sanitizedNumber = number.replace(/[^0-9]/g, '');
-    const session = await Session.findOne({ number: sanitizedNumber });
-    if (session && session.config) {
-      return session.config;
-    }
-    return { ...defaultConfig };
-  } catch (error) {
-    console.error('❌ Failed to load config:', error);
-    return { ...defaultConfig };
-  }
-}
-
 //=================FONCTION PRINCIPALE=================================//
 
 async function BILALMDPair(number, res) {
@@ -901,7 +885,7 @@ async function setupBILALCommandHandlers(socket, number) {
     if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
 
     const userConfig = await getUserConfigFromMongoDB(number);
-    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
+    loadConfig(number).catch(console.error);
     const type = getContentType(msg.message);
     if (!msg.message) return;
 
@@ -1150,9 +1134,13 @@ async function unbanUser(number, targetNumber) {
 }
 
 //=================API ROUTES=================================//
-const router = express.Router();
 
-router.get('/', async (req, res) => {
+const app = express();
+const port = process.env.PORT || 9090;
+
+app.use(express.json());
+
+app.get('/', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     return res.status(400).send({ error: 'Number parameter is required' });
@@ -1172,7 +1160,7 @@ router.get('/', async (req, res) => {
   await BILALMDPair(number, res);
 });
 
-router.get('/status', async (req, res) => {
+app.get('/status', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     const activeConnections = Array.from(activeSockets.keys()).map(num => {
@@ -1199,14 +1187,14 @@ router.get('/status', async (req, res) => {
   });
 });
 
-router.get('/active', (req, res) => {
+app.get('/active', (req, res) => {
   res.status(200).send({
     count: activeSockets.size,
     numbers: Array.from(activeSockets.keys())
   });
 });
 
-router.get('/ping', (req, res) => {
+app.get('/ping', (req, res) => {
   res.status(200).send({
     status: 'active',
     message: '🚀 BILAL-MD MULTI SESSION is running',
@@ -1214,7 +1202,7 @@ router.get('/ping', (req, res) => {
   });
 });
 
-router.get('/connect-all', async (req, res) => {
+app.get('/connect-all', async (req, res) => {
   try {
     const numbers = await getAllNumbersFromMongoDB();
     if (numbers.length === 0) {
@@ -1258,6 +1246,15 @@ async function autoReconnectFromMongoDB() {
   }
 }
 
+// Start the server
+app.listen(port, () => {
+  console.log(`🚀 BILAL-MD Multi Session Server listening on port http://localhost:${port}`);
+  // Auto reconnect on startup
+  setTimeout(() => {
+    autoReconnectFromMongoDB();
+  }, 5000);
+});
+
 // Utility function
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -1280,5 +1277,4 @@ process.on('uncaughtException', (err) => {
   exec(`pm2 restart ${process.env.PM2_NAME || 'BILAL-MD-multi'}`);
 });
 
-module.exports = router;
-
+module.exports = { activeSockets, getConnectionStatus, isNumberAlreadyConnected };
