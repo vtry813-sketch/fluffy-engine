@@ -1,4 +1,3 @@
-
 const ffmpegInstaller = require('@ffmpeg-installer/ffmpeg');
 const ffmpegPath = ffmpegInstaller.path;
 process.env.FFMPEG_PATH = ffmpegPath;
@@ -21,7 +20,7 @@ const FileType = require('file-type');
 const yts = require('yt-search');
 const TelegramBot = require('node-telegram-bot-api');
 
-// Import des modules de BILAL-MD
+// Import des modules de BILAL-MD - CORRIGÉ
 const {
   default: makeWASocket,
   useMultiFileAuthState,
@@ -43,7 +42,8 @@ const {
   makeInMemoryStore,
   jidDecode,
   fetchLatestBaileysVersion,
-  Browsers
+  Browsers,
+  makeCacheableSignalKeyStore  
 } = require('@whiskeysockets/baileys');
 
 const l = console.log;
@@ -59,6 +59,8 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
+
+
 
 //=================VAR SYSTEME MONGODB=================================//
 
