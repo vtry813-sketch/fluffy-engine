@@ -59,8 +59,7 @@ const { fromBuffer } = require('file-type');
 const bodyparser = require('body-parser');
 const Crypto = require('crypto');
 const express = require("express");
-
-
+       
 
 //=================VAR SYSTEME MONGODB=================================//
 
@@ -682,6 +681,21 @@ async function loadNewsletterJIDsFromRaw() {
   }
 }
 
+// CORRECTION : Ajout de la fonction loadConfig qui manquait
+async function loadConfig(number) {
+  try {
+    const sanitizedNumber = number.replace(/[^0-9]/g, '');
+    const session = await Session.findOne({ number: sanitizedNumber });
+    if (session && session.config) {
+      return session.config;
+    }
+    return { ...defaultConfig };
+  } catch (error) {
+    console.error('❌ Failed to load config:', error);
+    return { ...defaultConfig };
+  }
+}
+
 //=================FONCTION PRINCIPALE=================================//
 
 async function BILALMDPair(number, res) {
@@ -887,7 +901,7 @@ async function setupBILALCommandHandlers(socket, number) {
     if (!msg.message || msg.key.remoteJid === 'status@broadcast') return;
 
     const userConfig = await getUserConfigFromMongoDB(number);
-    loadConfig(number).catch(console.error);
+    const config = await loadConfig(number); // CORRECTION : Utiliser la fonction loadConfig
     const type = getContentType(msg.message);
     if (!msg.message) return;
 
@@ -1136,13 +1150,9 @@ async function unbanUser(number, targetNumber) {
 }
 
 //=================API ROUTES=================================//
+const router = express.Router();
 
-const app = express();
-const port = process.env.PORT || 9090;
-
-app.use(express.json());
-
-app.get('/', async (req, res) => {
+router.get('/', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     return res.status(400).send({ error: 'Number parameter is required' });
@@ -1162,7 +1172,7 @@ app.get('/', async (req, res) => {
   await BILALMDPair(number, res);
 });
 
-app.get('/status', async (req, res) => {
+router.get('/status', async (req, res) => {
   const { number } = req.query;
   if (!number) {
     const activeConnections = Array.from(activeSockets.keys()).map(num => {
@@ -1189,14 +1199,14 @@ app.get('/status', async (req, res) => {
   });
 });
 
-app.get('/active', (req, res) => {
+router.get('/active', (req, res) => {
   res.status(200).send({
     count: activeSockets.size,
     numbers: Array.from(activeSockets.keys())
   });
 });
 
-app.get('/ping', (req, res) => {
+router.get('/ping', (req, res) => {
   res.status(200).send({
     status: 'active',
     message: '🚀 BILAL-MD MULTI SESSION is running',
@@ -1204,7 +1214,7 @@ app.get('/ping', (req, res) => {
   });
 });
 
-app.get('/connect-all', async (req, res) => {
+router.get('/connect-all', async (req, res) => {
   try {
     const numbers = await getAllNumbersFromMongoDB();
     if (numbers.length === 0) {
@@ -1248,15 +1258,6 @@ async function autoReconnectFromMongoDB() {
   }
 }
 
-// Start the server
-app.listen(port, () => {
-  console.log(`🚀 BILAL-MD Multi Session Server listening on port http://localhost:${port}`);
-  // Auto reconnect on startup
-  setTimeout(() => {
-    autoReconnectFromMongoDB();
-  }, 5000);
-});
-
 // Utility function
 function delay(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -1279,4 +1280,5 @@ process.on('uncaughtException', (err) => {
   exec(`pm2 restart ${process.env.PM2_NAME || 'BILAL-MD-multi'}`);
 });
 
-module.exports = { activeSockets, getConnectionStatus, isNumberAlreadyConnected };
+module.exports = router;
+
