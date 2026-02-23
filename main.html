@@ -3,475 +3,399 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PAIR CODE</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <title>BILAL-MD | Pair Code</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Rajdhani:wght@300;400;500;600&display=swap');
-    
     :root {
-      --primary: #8a2be2;
-      --secondary: #00f7ff;
-      --accent: #ff2a6d;
-      --dark: #0c1020;
-      --darker: #080c18;
-      --glass: rgba(255, 255, 255, 0.05);
-      --glass-border: rgba(255, 255, 255, 0.1);
+      --bg: #050810;
+      --card: #0d1117;
+      --border: rgba(99, 102, 241, 0.25);
+      --primary: #6366f1;
+      --primary-light: #818cf8;
+      --accent: #22d3ee;
+      --accent2: #a855f7;
+      --success: #10b981;
+      --danger: #ef4444;
+      --text: #f1f5f9;
+      --muted: #64748b;
+      --mono: 'JetBrains Mono', monospace;
     }
-    
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
       min-height: 100vh;
-      background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
-      font-family: 'Rajdhani', sans-serif;
-      color: white;
-      overflow: hidden;
-      position: relative;
-    }
-    
-    /* Effets d'arrière-plan futuriste */
-    body::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: 
-        radial-gradient(circle at 20% 30%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
-        radial-gradient(circle at 80% 70%, rgba(0, 247, 255, 0.1) 0%, transparent 50%);
-      z-index: -2;
-    }
-    
-    /* Grille futuriste en arrière-plan */
-    .grid {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background-image: 
-        linear-gradient(rgba(0, 247, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 247, 255, 0.05) 1px, transparent 1px);
-      background-size: 30px 30px;
-      perspective: 1000px;
-      transform-style: preserve-3d;
-      z-index: -1;
-    }
-    
-    .container {
+      background: var(--bg);
+      font-family: 'Space Grotesk', sans-serif;
+      color: var(--text);
       display: flex;
       flex-direction: column;
       align-items: center;
-      width: 100%;
-      padding: 20px;
-    }
-    
-    .main {
+      justify-content: center;
       position: relative;
-      width: 100%;
-      max-width: 380px;
-    }
-    
-    .box {
-      width: 100%;
-      padding: 30px;
-      position: relative;
-      text-align: center;
-      background: var(--glass);
-      border-radius: 16px;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      box-shadow: 
-        0 10px 30px rgba(0, 0, 0, 0.3),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1);
-      transform: perspective(1000px) rotateY(0deg);
       overflow: hidden;
-      transition: transform 0.5s ease, box-shadow 0.5s ease;
-      z-index: 1;
     }
-    
-    .box::before {
+    .bg-mesh { position: fixed; inset: 0; z-index: 0; overflow: hidden; }
+    .bg-mesh::before {
       content: '';
       position: absolute;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
-      background: linear-gradient(45deg, transparent, rgba(138, 43, 226, 0.1), rgba(0, 247, 255, 0.1), transparent);
-      transform: rotate(45deg);
-      animation: shine 6s infinite;
-      z-index: -1;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%);
+      top: -200px; left: -200px;
+      animation: drift1 12s ease-in-out infinite alternate;
     }
-    
-    @keyframes shine {
-      0% { transform: translateX(-100%) rotate(45deg); }
-      100% { transform: translateX(100%) rotate(45deg); }
-    }
-    
-    .box:hover {
-      transform: perspective(1000px) rotateY(5deg);
-      box-shadow: 
-        0 15px 35px rgba(0, 0, 0, 0.4),
-        inset 0 1px 0 rgba(255, 255, 255, 0.1),
-        0 0 15px rgba(138, 43, 226, 0.3);
-    }
-    
-    .logo {
-      margin-bottom: 20px;
-      display: flex;
-      justify-content: center;
-    }
-    
-    .logo-text {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 28px;
-      font-weight: 700;
-      background: linear-gradient(45deg, var(--primary), var(--secondary));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      text-shadow: 0 0 10px rgba(138, 43, 226, 0.5);
-      letter-spacing: 2px;
-    }
-    
-    .centered-text {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-    
-    h3 {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 18px;
-      font-weight: 500;
-      color: var(--secondary);
-      text-shadow: 0 0 5px rgba(0, 247, 255, 0.7);
-      margin-bottom: 5px;
-      letter-spacing: 1px;
-    }
-    
-    h6 {
-      font-size: 14px;
-      font-weight: 400;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 25px;
-    }
-    
-    .input-container {
-      display: flex;
-      background: rgba(0, 0, 0, 0.2);
-      border-radius: 12px;
-      padding: 4px;
-      gap: 4px;
-      width: 100%;
-      margin-bottom: 20px;
-      border: 1px solid var(--glass-border);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-    
-    .input-container input {
-      border-radius: 8px 0 0 8px;
-      background: rgba(0, 0, 0, 0.3);
-      width: 100%;
-      flex-basis: 75%;
-      padding: 15px;
-      border: none;
-      border-right: 1px solid rgba(138, 43, 226, 0.3);
-      color: white;
-      font-family: 'Rajdhani', sans-serif;
-      font-size: 16px;
-      font-weight: 500;
-      transition: all 0.3s ease;
-    }
-    
-    .input-container input:focus {
-      outline: none;
-      background: rgba(0, 0, 0, 0.4);
-      box-shadow: 0 0 10px rgba(138, 43, 226, 0.3);
-    }
-    
-    .input-container input::placeholder {
-      color: rgba(255, 255, 255, 0.4);
-    }
-    
-    .input-container button {
-      flex-basis: 25%;
-      padding: 15px;
-      background: linear-gradient(135deg, var(--primary) 0%, #6a11cb 100%);
-      font-family: 'Orbitron', sans-serif;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: white;
-      border: none;
-      border-radius: 0 8px 8px 0;
-      transition: all 0.3s ease;
-      cursor: pointer;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .input-container button::before {
+    .bg-mesh::after {
       content: '';
       position: absolute;
-      top: 0;
-      left: -100%;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-      transition: 0.5s;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(168,85,247,0.10) 0%, transparent 70%);
+      bottom: -100px; right: -100px;
+      animation: drift2 15s ease-in-out infinite alternate;
     }
-    
-    .input-container button:hover::before {
-      left: 100%;
+    @keyframes drift1 { to { transform: translate(80px, 60px); } }
+    @keyframes drift2 { to { transform: translate(-60px, -80px); } }
+    .scanlines {
+      position: fixed; inset: 0; z-index: 0;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.025) 2px, rgba(0,0,0,0.025) 4px);
+      pointer-events: none;
     }
-    
-    .input-container button:hover {
-      background: linear-gradient(135deg, var(--accent) 0%, #ff2a6d 100%);
-      box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
+    .orb {
+      position: fixed; border-radius: 50%; filter: blur(80px);
+      opacity: 0.12; animation: orbFloat linear infinite; pointer-events: none; z-index: 0;
     }
-    
-    #waiting-message {
-      display: none;
-      color: var(--secondary);
-      font-family: 'Orbitron', sans-serif;
-      margin: 15px 0;
-      text-shadow: 0 0 5px rgba(0, 247, 255, 0.7);
+    @keyframes orbFloat { 0% { transform: translateY(110vh); } 100% { transform: translateY(-20vh); } }
+    .wrapper { position: relative; z-index: 10; width: 100%; max-width: 460px; padding: 20px; }
+    .status-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(16,185,129,0.1); border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 100px; padding: 6px 16px;
+      font-size: 12px; font-weight: 600; color: var(--success);
+      letter-spacing: 1px; text-transform: uppercase; margin-bottom: 20px;
+      font-family: var(--mono);
     }
-    
-    #pair {
-      min-height: 60px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-top: 10px;
+    .status-dot {
+      width: 7px; height: 7px; background: var(--success);
+      border-radius: 50%; animation: blink 1.5s ease-in-out infinite;
     }
-    
-    .code-display {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 22px;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 12px 20px;
-      border-radius: 8px;
-      border: 1px solid var(--glass-border);
-      cursor: pointer;
-      transition: all 0.3s ease;
-      display: flex;
-      align-items: center;
-      gap: 10px;
+    @keyframes blink {
+      0%,100% { opacity:1; box-shadow: 0 0 6px var(--success); }
+      50% { opacity:0.3; box-shadow: none; }
     }
-    
-    .code-display:hover {
-      background: rgba(0, 0, 0, 0.4);
-      box-shadow: 0 0 15px rgba(138, 43, 226, 0.3);
-      transform: translateY(-2px);
-    }
-    
-    .code-text {
-      color: white;
-      font-weight: 500;
-    }
-    
-    .code-value {
-      color: var(--secondary);
-      font-weight: 700;
-      text-shadow: 0 0 5px rgba(0, 247, 255, 0.7);
-    }
-    
-    .pulse {
-      animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-      0% { box-shadow: 0 0 0 0 rgba(0, 247, 255, 0.4); }
-      70% { box-shadow: 0 0 0 10px rgba(0, 247, 255, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(0, 247, 255, 0); }
-    }
-    
-    @media (max-width: 500px) {
-      .input-container {
-        flex-direction: column;
-      }
-      
-      .input-container input {
-        border-radius: 8px;
-        border-right: none;
-        border-bottom: 1px solid rgba(138, 43, 226, 0.3);
-      }
-      
-      .input-container button {
-        padding: 12px;
-        border-radius: 8px;
-      }
-      
-      .box {
-        padding: 25px 20px;
-      }
-    }
-    
-    /* Effets de particules futuristes */
-    .particles {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 40px 36px;
+      position: relative;
       overflow: hidden;
-      z-index: -1;
+      box-shadow: 0 0 0 1px rgba(255,255,255,0.03), 0 24px 64px rgba(0,0,0,0.6), 0 0 80px rgba(99,102,241,0.04);
     }
-    
-    .particle {
-      position: absolute;
-      background: rgba(138, 43, 226, 0.3);
+    .card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--primary), var(--accent2), var(--accent));
+    }
+    .card::after {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 160px; height: 160px;
+      background: radial-gradient(circle, rgba(99,102,241,0.07), transparent 70%);
       border-radius: 50%;
-      animation: float 15s infinite linear;
     }
-    
-    @keyframes float {
-      0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-      10% { opacity: 1; }
-      90% { opacity: 1; }
-      100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+    .brand { text-align: center; margin-bottom: 32px; }
+    .brand-logo {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, var(--primary), var(--accent2));
+      border-radius: 18px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 28px; margin-bottom: 14px;
+      box-shadow: 0 8px 28px rgba(99,102,241,0.35), 0 0 0 1px rgba(255,255,255,0.08);
+    }
+    .brand-name {
+      font-size: 26px; font-weight: 700;
+      background: linear-gradient(135deg, #fff 0%, var(--primary-light) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px; margin-bottom: 6px;
+    }
+    .brand-desc { font-size: 13px; color: var(--muted); }
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 24px 0; }
+    .field-label {
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1.5px; color: var(--muted); margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .field-label i { color: var(--primary-light); }
+    .input-group {
+      display: flex;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 14px; overflow: hidden;
+      transition: all 0.3s; margin-bottom: 14px;
+    }
+    .input-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+    }
+    .input-prefix {
+      padding: 0 16px; display: flex; align-items: center;
+      background: rgba(99,102,241,0.08);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      color: var(--primary-light); font-family: var(--mono);
+      font-size: 16px; font-weight: 700;
+    }
+    .input-group input {
+      flex: 1; background: transparent; border: none;
+      padding: 16px 18px; color: var(--text);
+      font-family: var(--mono); font-size: 15px;
+      font-weight: 500; outline: none; letter-spacing: 1px;
+    }
+    .input-group input::placeholder { color: rgba(255,255,255,0.18); letter-spacing: 0; font-family: 'Space Grotesk', sans-serif; }
+    .btn-pair {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent2) 100%);
+      border: none; border-radius: 14px; color: white;
+      font-family: 'Space Grotesk', sans-serif; font-size: 15px;
+      font-weight: 700; letter-spacing: 0.3px; cursor: pointer;
+      transition: all 0.3s; position: relative; overflow: hidden;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .btn-pair:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(99,102,241,0.4); }
+    .btn-pair:active { transform: translateY(0); }
+    .btn-pair.loading { pointer-events: none; opacity: 0.7; }
+    #result-area { margin-top: 18px; }
+    .loading-state {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(99,102,241,0.06);
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 12px; padding: 15px 18px;
+      color: var(--primary-light); font-size: 13.5px; font-weight: 500;
+    }
+    .spinner {
+      width: 18px; height: 18px;
+      border: 2px solid rgba(99,102,241,0.2);
+      border-top-color: var(--primary-light);
+      border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .code-card {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(34,211,238,0.2);
+      border-radius: 16px; padding: 28px 24px; text-align: center;
+      animation: fadeSlideIn 0.4s ease;
+    }
+    @keyframes fadeSlideIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: translateY(0); } }
+    .code-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 2px; color: var(--muted); margin-bottom: 14px; }
+    .code-value {
+      font-family: var(--mono); font-size: 32px; font-weight: 700;
+      color: var(--accent); text-shadow: 0 0 24px rgba(34,211,238,0.4);
+      letter-spacing: 8px; margin-bottom: 18px; display: block;
+    }
+    .btn-copy {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(34,211,238,0.1);
+      border: 1px solid rgba(34,211,238,0.25);
+      border-radius: 100px; padding: 9px 22px;
+      color: var(--accent); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+    .btn-copy:hover { background: rgba(34,211,238,0.18); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(34,211,238,0.2); }
+    .code-hint {
+      margin-top: 14px; font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .error-state {
+      background: rgba(239,68,68,0.06);
+      border: 1px solid rgba(239,68,68,0.2);
+      border-radius: 12px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 13px; color: #fca5a5;
+      animation: fadeSlideIn 0.3s ease;
+    }
+    .steps { margin-top: 28px; display: flex; flex-direction: column; gap: 10px; }
+    .step {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 13px 15px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: 12px; transition: border-color 0.2s;
+    }
+    .step:hover { border-color: rgba(99,102,241,0.2); }
+    .step-num {
+      width: 26px; height: 26px;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.3);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--primary-light);
+      flex-shrink: 0; font-family: var(--mono);
+    }
+    .step-text { font-size: 13px; color: rgba(255,255,255,0.6); line-height: 1.5; padding-top: 3px; }
+    .step-text strong { color: rgba(255,255,255,0.9); }
+    .footer {
+      text-align: center; margin-top: 20px;
+      font-size: 12px; color: var(--muted);
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .footer span { color: var(--primary-light); font-weight: 600; }
+    @media (max-width: 500px) {
+      .card { padding: 28px 20px; }
+      .code-value { font-size: 24px; letter-spacing: 5px; }
     }
   </style>
 </head>
 <body>
-  <div class="grid"></div>
-  <div class="particles" id="particles"></div>
-  
-  <div class="container">
-    <div class="main">
-      <div class="box" id="box">
-        <div class="logo">
-          <div class="logo-text">PAIR CODE</div>
-        </div>
-        
-        <div id="text">
-          <p>
-            <h3 class="centered-text">∞ Link with phone number ∞</h3>
-            <h6>🌴 Enter Your Number With Country Code 🌴</h6>
-            <div class="input-container">
-              <input placeholder="+554xxxxxxxx" type="tel" id="number" name="number">
-              <button id="submit">enter</button>
-            </div>
-           
-            <a id="waiting-message" class="centered-text" style="display: none;">Processing...</a>
-            <main id="pair"></main>
-          </p>
-        </div>
+
+<div class="bg-mesh"></div>
+<div class="scanlines"></div>
+
+<div class="wrapper">
+  <div style="display:flex;justify-content:center;">
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      System Online
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="brand">
+      <div class="brand-logo">⚡</div>
+      <div class="brand-name">BILAL-MD</div>
+      <div class="brand-desc">WhatsApp Bot — Multi Session Pairing</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="field-label">
+      <i class="fas fa-phone-alt"></i> Phone Number
+    </div>
+
+    <div class="input-group">
+      <div class="input-prefix">+</div>
+      <input type="tel" id="phone" placeholder="Country code + number (e.g. 12345678901)" autocomplete="off" maxlength="20">
+    </div>
+
+    <button class="btn-pair" id="btn-pair" onclick="requestCode()">
+      <i class="fas fa-link"></i>
+      Generate Pair Code
+    </button>
+
+    <div id="result-area"></div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-text">Enter your number <strong>with country code</strong>, without the + sign</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-text">Click <strong>Generate Pair Code</strong> and copy the 8-digit code</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-text">Open WhatsApp → <strong>Linked Devices → Link with phone number</strong> → Paste code</div>
       </div>
     </div>
   </div>
-  
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.0.0-alpha.1/axios.min.js"></script>
-  <script>
-    let a = document.getElementById("pair");
-    let b = document.getElementById("submit");
-    let c = document.getElementById("number");
-    let box = document.getElementById("box");
-    let waitingMessage = document.getElementById("waiting-message");
 
-    // Create background particles
-    function createParticles() {
-      const particlesContainer = document.getElementById('particles');
-      const particleCount = 30;
-      
-      for (let i = 0; i < particleCount; i++) {
-        const particle = document.createElement('div');
-        particle.classList.add('particle');
-        
-        const size = Math.random() * 10 + 2;
-        const colors = [
-          'rgba(138, 43, 226, 0.3)', 
-          'rgba(0, 247, 255, 0.3)', 
-          'rgba(255, 42, 109, 0.3)'
-        ];
-        
-        particle.style.width = `${size}px`;
-        particle.style.height = `${size}px`;
-        particle.style.background = colors[Math.floor(Math.random() * colors.length)];
-        particle.style.left = `${Math.random() * 100}%`;
-        particle.style.animationDuration = `${Math.random() * 20 + 10}s`;
-        particle.style.animationDelay = `${Math.random() * 5}s`;
-        
-        particlesContainer.appendChild(particle);
-      }
-    }
-    
-    createParticles();
+  <div class="footer">
+    Made with <i class="fas fa-heart" style="color:#ef4444;font-size:10px;margin:0 2px;"></i> by <span>BILAL KING</span>
+  </div>
+</div>
 
-    async function Copy() {
-      let text = document.getElementById("copy-value").innerText;
-      let codeDisplay = document.getElementById("code-display");
-      await navigator.clipboard.writeText(text);
-      
-      codeDisplay.innerHTML = '<i class="fas fa-check" style="color:#00ff00; margin-right:8px;"></i> COPIED!';
-      codeDisplay.style.background = 'rgba(0, 255, 0, 0.1)';
-      codeDisplay.style.border = '1px solid rgba(0, 255, 0, 0.3)';
-      
-      setTimeout(() => {
-        codeDisplay.innerHTML = `
-          <i class="fas fa-copy" style="color:var(--secondary);"></i>
-          <span class="code-text">CODE:</span>
-          <span class="code-value" id="copy-value">${text}</span>
-        `;
-        codeDisplay.style.background = 'rgba(0, 0, 0, 0.3)';
-        codeDisplay.style.border = '1px solid var(--glass-border)';
-      }, 2000);
-    }
-
-    b.addEventListener("click", async (e) => {
-      e.preventDefault();
-      if (!c.value) {
-        a.innerHTML = '<div style="color:var(--accent);font-weight:500;background:rgba(255,42,109,0.1);padding:10px;border-radius:8px;border:1px solid rgba(255,42,109,0.3)"><i class="fas fa-exclamation-circle"></i> Enter your WhatsApp number with country code.</div>';
-      } else if (c.value.replace(/[^0-9]/g, "").length < 11) {
-        a.innerHTML = '<div style="color:var(--accent);font-weight:500;background:rgba(255,42,109,0.1);padding:10px;border-radius:8px;border:1px solid rgba(255,42,109,0.3)"><i class="fas fa-times"></i> Invalid number format</div>';
-      } else {
-        const bc = c.value.replace(/[^0-9]/g, "");
-        let bb = "";
-        let bbc = "";
-        const cc = bc.split('');
-        cc.map(a => {
-          bbc += a;
-          if (bbc.length == 3) {
-            bb += " " + a;
-          } else if (bbc.length == 8) {
-            bb += " " + a;
-          } else {
-            bb += a;
-          }
-        });
-        c.type = "text";
-        c.value = "+" + bb;
-        c.style.color = "white";
-        waitingMessage.style.display = "block";
-        a.innerHTML = '';
-        
-        try {
-          let { data } = await axios(`/code?number=${bc}`);
-          let code = data.code || "Service Unavailable";
-          waitingMessage.style.display = "none";
-          
-          a.innerHTML = `
-            <div class="code-display pulse" id="code-display" onclick="Copy()">
-              <i class="fas fa-copy" style="color:var(--secondary);"></i>
-              <span class="code-text">CODE:</span>
-              <span class="code-value" id="copy-value">${code}</span>
-            </div>
-          `;
-        } catch (error) {
-          waitingMessage.style.display = "none";
-          a.innerHTML = '<div style="color:var(--accent);font-weight:500;background:rgba(255,42,109,0.1);padding:10px;border-radius:8px;border:1px solid rgba(255,42,109,0.3)"><i class="fas fa-exclamation-triangle"></i> Service Unavailable</div>';
-        }
-      }
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.6.0/axios.min.js"></script>
+<script>
+  // Floating orbs
+  ['#6366f1','#a855f7','#22d3ee','#10b981'].forEach((color, i) => {
+    const orb = document.createElement('div');
+    orb.className = 'orb';
+    const s = 150 + i * 60;
+    Object.assign(orb.style, {
+      width: s+'px', height: s+'px', background: color,
+      left: (10 + Math.random()*75)+'%',
+      animationDuration: (20 + i*7)+'s',
+      animationDelay: -(i*5)+'s'
     });
-  </script>
+    document.body.appendChild(orb);
+  });
+
+  const resultArea = document.getElementById('result-area');
+  const btn = document.getElementById('btn-pair');
+  const phoneInput = document.getElementById('phone');
+  let currentCode = '';
+
+  phoneInput.addEventListener('keydown', e => { if (e.key === 'Enter') requestCode(); });
+
+  async function requestCode() {
+    const raw = phoneInput.value.replace(/[^0-9]/g, '');
+    if (!raw) { showError('Please enter your WhatsApp phone number.'); return; }
+    if (raw.length < 10) { showError('Number too short — include country code (e.g. 12345678901).'); return; }
+
+    btn.classList.add('loading');
+    btn.innerHTML = '<div class="spinner"></div> Connecting…';
+
+    resultArea.innerHTML = `
+      <div class="loading-state">
+        <div class="spinner"></div>
+        Requesting pairing code for <strong style="color:#fff;margin-left:4px;">+${raw}</strong>…
+      </div>`;
+
+    try {
+      const { data } = await axios.get('/code?number=' + raw);
+      const code = data.code || 'UNAVAILABLE';
+      currentCode = code;
+      showCode(code);
+    } catch (err) {
+      showError('Failed to get pairing code. Server may be busy — please try again.');
+    } finally {
+      btn.classList.remove('loading');
+      btn.innerHTML = '<i class="fas fa-redo"></i> Generate New Code';
+    }
+  }
+
+  function showCode(code) {
+    resultArea.innerHTML = `
+      <div class="code-card">
+        <div class="code-label"><i class="fas fa-key" style="color:var(--accent);margin-right:6px;"></i> Your Pairing Code</div>
+        <span class="code-value">${code}</span>
+        <button class="btn-copy" onclick="copyCode()">
+          <i class="fas fa-copy" id="copyIcon"></i>
+          <span id="copyText">Copy Code</span>
+        </button>
+        <div class="code-hint">
+          <i class="fas fa-clock"></i>
+          Enter this code in WhatsApp within 60 seconds.
+        </div>
+      </div>`;
+  }
+
+  function copyCode() {
+    if (!currentCode) return;
+    navigator.clipboard.writeText(currentCode).then(() => {
+      document.getElementById('copyIcon').className = 'fas fa-check';
+      document.getElementById('copyText').textContent = 'Copied!';
+      setTimeout(() => {
+        if (document.getElementById('copyIcon')) {
+          document.getElementById('copyIcon').className = 'fas fa-copy';
+          document.getElementById('copyText').textContent = 'Copy Code';
+        }
+      }, 2500);
+    }).catch(() => {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = currentCode;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    });
+  }
+
+  function showError(msg) {
+    resultArea.innerHTML = `
+      <div class="error-state">
+        <i class="fas fa-exclamation-circle" style="color:var(--danger);font-size:16px;flex-shrink:0;"></i>
+        ${msg}
+      </div>`;
+  }
+</script>
 </body>
 </html>
