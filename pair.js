@@ -133,13 +133,21 @@ const telegramBot = new TelegramBot(defaultConfig.TELEGRAM_BOT_TOKEN, { polling:
 
 // MongoDB connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://kaviduinduwara:kavidu2008@cluster0.bqmspdf.mongodb.net/soloBot?retryWrites=true&w=majority&appName=Cluster0';
+
+// mongoReady: Promise résolue quand MongoDB est connecté — exportée pour inconnu.js
+let resolveMongoReady;
+const mongoReady = new Promise((resolve) => { resolveMongoReady = resolve; });
+
 mongoose.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+  serverSelectionTimeoutMS: 30000,  // 30s pour trouver un serveur
+  socketTimeoutMS: 45000,           // 45s pour les opérations
+  connectTimeoutMS: 30000           // 30s pour la connexion initiale
 }).then(() => {
   console.log('✅ Connected to MongoDB');
+  resolveMongoReady();              // signaler que MongoDB est prêt
 }).catch(err => {
   console.error('❌ MongoDB connection error:', err);
+  resolveMongoReady();              // résoudre quand même pour ne pas bloquer indéfiniment
 });
 
 // MongoDB Schemas
@@ -1297,4 +1305,5 @@ process.on('uncaughtException', (err) => {
 
 module.exports = router;
 module.exports.autoReconnectFromMongoDB = autoReconnectFromMongoDB;
+module.exports.mongoReady = mongoReady;
 
