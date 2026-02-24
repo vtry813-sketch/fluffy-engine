@@ -851,7 +851,7 @@ async function BILALMDPair(number, res) {
 
             console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
 
-            // Plugins already loaded at startup
+            // Plugins already preloaded at startup
 
           } catch (error) {
             console.error('Connection setup error:', error);
@@ -1020,9 +1020,9 @@ async function setupBILALCommandHandlers(socket, number) {
     // Process commands
     if (isCmd) {
       const events = require('./command');
-      const cmdName = command; // 'command' is already correctly parsed above with prefix.length
-      console.log(`[CMD] User: ${senderNumber} | Command: ${cmdName} | Prefix: ${prefix} | Total cmds: ${events.commands.length}`);
+      const cmdName = command; // already correctly parsed with prefix.length
       const matchedCmd = events.commands.find((c) => c.pattern === cmdName) || events.commands.find((c) => c.alias && c.alias.includes(cmdName));
+      console.log('[CMD] user:', senderNumber, '| cmd:', cmdName, '| prefix:', prefix, '| total:', events.commands.length);
       
       if (matchedCmd) {
         if (matchedCmd.react) socket.sendMessage(from, { react: { text: matchedCmd.react, key: msg.key } });
@@ -1140,7 +1140,6 @@ async function unbanUser(number, targetNumber) {
 
 //=================PLUGIN PRELOAD=================================//
 
-// Load all plugins once at startup so commands are registered globally
 function preloadPlugins() {
   try {
     console.log('🧬 Loading plugins at startup...');
@@ -1297,4 +1296,5 @@ process.on('uncaughtException', (err) => {
 });
 
 module.exports = router;
+module.exports.autoReconnectFromMongoDB = autoReconnectFromMongoDB;
 
