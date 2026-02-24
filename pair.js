@@ -851,19 +851,7 @@ async function BILALMDPair(number, res) {
 
             console.log(`🎉 ${sanitizedNumber} successfully connected to BILAL-MD!`);
 
-            // Install plugins
-            console.log('🧬 Installing Plugins...');
-            fs.readdirSync("./plugins/").forEach((plugin) => {
-              if (path.extname(plugin).toLowerCase() === ".js") {
-                try {
-                  require("./plugins/" + plugin);
-                  console.log(`✅ Loaded plugin: ${plugin}`);
-                } catch (err) {
-                  console.error(`❌ Failed to load plugin ${plugin}:`, err);
-                }
-              }
-            });
-            console.log('Plugins installed successful ✅');
+            // Plugins already loaded at startup
 
           } catch (error) {
             console.error('Connection setup error:', error);
@@ -1032,13 +1020,14 @@ async function setupBILALCommandHandlers(socket, number) {
     // Process commands
     if (isCmd) {
       const events = require('./command');
-      const cmdName = isCmd ? body.slice(1).trim().split(" ")[0].toLowerCase() : false;
-      const cmd = events.commands.find((cmd) => cmd.pattern === (cmdName)) || events.commands.find((cmd) => cmd.alias && cmd.alias.includes(cmdName));
+      const cmdName = command; // 'command' is already correctly parsed above with prefix.length
+      console.log(`[CMD] User: ${senderNumber} | Command: ${cmdName} | Prefix: ${prefix} | Total cmds: ${events.commands.length}`);
+      const matchedCmd = events.commands.find((c) => c.pattern === cmdName) || events.commands.find((c) => c.alias && c.alias.includes(cmdName));
       
-      if (cmd) {
-        if (cmd.react) socket.sendMessage(from, { react: { text: cmd.react, key: msg.key } });
+      if (matchedCmd) {
+        if (matchedCmd.react) socket.sendMessage(from, { react: { text: matchedCmd.react, key: msg.key } });
         try {
-          cmd.function(socket, msg, m, { from, quoted, body, isCmd, command, args, q: args.join(' '), text: args.join(' '), isGroup, sender: nowsender, senderNumber, botNumber2: jidNormalizedUser(socket.user.id), botNumber, pushname: msg.pushName || 'Sin Nombre', isMe: botNumber.includes(senderNumber), isOwner, isCreator: isOwner, groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, reply });
+          matchedCmd.function(socket, msg, m, { from, quoted, body, isCmd, command, args, q: args.join(' '), text: args.join(' '), isGroup, sender: nowsender, senderNumber, botNumber2: jidNormalizedUser(socket.user.id), botNumber, pushname: msg.pushName || 'Sin Nombre', isMe: botNumber.includes(senderNumber), isOwner, isCreator: isOwner, groupMetadata: isGroup ? await socket.groupMetadata(from).catch(e => {}) : '', groupName: isGroup ? (await socket.groupMetadata(from).catch(e => {})).subject : '', participants: isGroup ? (await socket.groupMetadata(from).catch(e => {})).participants : '', groupAdmins: isGroup ? await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants) : '', isBotAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(jidNormalizedUser(socket.user.id)) : false, isAdmins: isGroup ? (await getGroupAdmins((await socket.groupMetadata(from).catch(e => {})).participants)).includes(nowsender) : false, reply });
         } catch (e) {
           console.error("[PLUGIN ERROR] " + e);
         }
@@ -1148,6 +1137,33 @@ async function unbanUser(number, targetNumber) {
   }
   return false;
 }
+
+//=================PLUGIN PRELOAD=================================//
+
+// Load all plugins once at startup so commands are registered globally
+function preloadPlugins() {
+  try {
+    console.log('🧬 Loading plugins at startup...');
+    const pluginsDir = path.join(__dirname, 'plugins');
+    if (fs.existsSync(pluginsDir)) {
+      fs.readdirSync(pluginsDir).forEach((plugin) => {
+        if (path.extname(plugin).toLowerCase() === '.js') {
+          try {
+            require('./plugins/' + plugin);
+            console.log(`✅ Plugin loaded: ${plugin}`);
+          } catch (err) {
+            console.error(`❌ Failed to load plugin ${plugin}:`, err.message);
+          }
+        }
+      });
+    }
+    console.log('✅ All plugins loaded successfully');
+  } catch (err) {
+    console.error('❌ Plugin preload error:', err);
+  }
+}
+
+preloadPlugins();
 
 //=================API ROUTES=================================//
 const router = express.Router();
